@@ -31,32 +31,39 @@ int get_pos(struct activity *act[], unsigned int act_flag) {
 
 
 int main(int argc, char ** argv) {
-    if(argc < 2) {
-        fprintf(stderr, "Usage: %s <sa file>\n", argv[0]);
+    if(argc < 3) {
+        fprintf(stderr, "Usage: %s <sa file> <output file>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    struct stat sbuf;
 	char * path = argv[1];
+    char * target = argv[2];
+    
+    struct stat sbuf;
 	int fd = open(path, O_RDONLY);
 	fstat(fd, &sbuf);
 	off_t len = sbuf.st_size;
     void * m_start = (void *) mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
     void * m = m_start;
     
-    // Read file_magic
-    struct file_magic *magic = (struct file_magic *)m;
+    FILE * target_file = fopen(target, "w");
+
+    // Write file_magic
+    fwrite(m, FILE_MAGIC_SIZE, 1, target_file);
     m += FILE_MAGIC_SIZE;
 
-    // Read file_header
+    // Write file_header
     struct file_header *hdr = (struct file_header *)m;
+    #ifdef VERBOSE
     printf("Linux %s (%s) \t%02u/%02u/%d \t_x86_64_\t(%d CPU)\n\n",
            hdr->sa_release, hdr->sa_nodename,
            hdr->sa_month, hdr->sa_day, hdr->sa_year + 1900,
            hdr->sa_cpu_nr > 1 ? hdr->sa_cpu_nr - 1 : 1);
+    #endif
+    fwrite(m, FILE_HEADER_SIZE, 1, target_file);
     m += FILE_HEADER_SIZE;
     
-    // Read file_activity list
+    // Read and write file_activity list
     int p, i, j, k;
     struct file_activity *fal = ((struct file_activity *)m);
     struct file_activity *file_actlst[hdr->sa_act_nr]; 
@@ -97,11 +104,14 @@ int main(int argc, char ** argv) {
         }
 
         record_hdr[curr] = ((struct record_header *) m);
+        fwrite(m, RECORD_HEADER_SIZE, 1, target_file);
         m += RECORD_HEADER_SIZE;
         
+        #ifdef VERBOSE
         if (!first_record) {
             printf("\nTIME: %02u:%02u:%02u-------", record_hdr[curr]->hour, record_hdr[curr]->minute, record_hdr[curr]->second);
         }
+        #endif
 
         // Read statistics for each activity
         __nr_t nr_value;
@@ -131,12 +141,14 @@ int main(int argc, char ** argv) {
 
                 unsigned long long itv = record_hdr[curr]->uptime_cs - record_hdr[prev]->uptime_cs;
 
+                fwrite((void *)&fal->id, sizeof(unsigned int), 1, target_file);
+
                 if (fal->id == A_CPU) {
                     // Print CPU stats
                     print_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini);
                 }
                 
-                if (fal->id == A_MEMORY) {
+                else if (fal->id == A_MEMORY) {
                     // Print Memory stats
                     print_memory_stats((struct stats_memory *)act[p]->buf[curr]);
                 }
