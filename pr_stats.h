@@ -3,4 +3,4 @@
 
 void print_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu);
 
-void print_memory_stats(struct stats_memory *smc, struct stats_memory *smp);
+void print_memory_stats(struct stats_memory *smc);

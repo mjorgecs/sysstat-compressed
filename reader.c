@@ -133,7 +133,7 @@ int main(int argc, char ** argv) {
                 
                 if (fal->id == A_MEMORY) {
                     // Print Memory stats
-                    print_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev]);
+                    print_memory_stats((struct stats_memory *)act[p]->buf[curr]);
                 }
             }            
         }
