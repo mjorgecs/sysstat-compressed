@@ -152,7 +152,7 @@ int main(int argc, char ** argv) {
                 }
 
                 else if (fal->id == A_QUEUE) {
-                    // Print Swap stats
+                    // Print Queue stats
                     print_queue_stats((struct stats_queue *)act[p]->buf[curr]);
                 }
             }            
