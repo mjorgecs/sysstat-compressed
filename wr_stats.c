@@ -34,22 +34,21 @@ void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, F
             fwrite((void *)&deltas[j], sizeof(long), 1, fd);
         }
         
-        #ifdef VERBOSE
-        // Print CPU name (all for first, then individual CPUs)
         if (i == 0) {
+            #ifdef VERBOSE
+            // Print CPU name (all for first, then individual CPUs)
             printf("%-12s", "all-delta");
             printf("  %5ld  %5ld  %5ld  %5ld   %5ld  %5ld  %5ld   %5ld   %5ld  %5ld\n",
                     deltas[0], deltas[1], deltas[2], deltas[3], deltas[4], deltas[5], deltas[6], deltas[7], deltas[8], deltas[9]);
+            #endif        
             /* show only all cpus*/
             break;
-
         } /*else {
             printf("%-12d", i - 1);
             printf("  %5.2f  %5.2f  %5.2f  %5.2f   %5.2f  %5.2f  %5.2f   %5.2f   %5.2f  %5.2f\n",
             pc_user, pc_nice, pc_sys, pc_iowait, pc_steal, 
             pc_irq, pc_soft, pc_guest, pc_gnice, pc_idle);
         }*/
-        #endif        
     }
 }
 
@@ -89,8 +88,7 @@ void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE
     /* Print deltas */
     printf("\n%-12s  %12s  %12s  %12s  %12s  %12s  %12s  %12s  %12s  %12s\n",
            "MEMORY", 
-           "kbmemfree", "kbavail", "kbbuffers", "kbcached", "kbcommit", "kbactive", "kbinact", "kbdirty", "kbshmem",
-           "kbmemtotal", "kbcas", "kbanonpg", "kbslab", "kbkstack", "kbpgtbl", "kbvmused");
+           "kbmemfree", "kbavail", "kbbuffers", "kbcached", "kbcommit", "kbactive", "kbinact", "kbdirty", "kbshmem");
 
     printf("%-12s  %12ld  %12ld  %12ld  %12ld  %12ld  %12ld  %12ld  %12ld  %12ld\n",
             "delta", deltas[0], deltas[1], deltas[2], deltas[3], deltas[4], deltas[5], deltas[6], deltas[7], deltas[8]);

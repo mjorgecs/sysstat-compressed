@@ -94,7 +94,6 @@ int main(int argc, char ** argv) {
 
     // Read records
     int curr = 1, prev = 0;
-    int first_record = 1;
     int records_read = 0;
     
     while (1) {  // Read until EOF
@@ -108,9 +107,7 @@ int main(int argc, char ** argv) {
         m += RECORD_HEADER_SIZE;
         
         #ifdef VERBOSE
-        if (!first_record) {
-            printf("\nTIME: %02u:%02u:%02u-------", record_hdr[curr]->hour, record_hdr[curr]->minute, record_hdr[curr]->second);
-        }
+        printf("\nTIME: %02u:%02u:%02u-------", record_hdr[curr]->hour, record_hdr[curr]->minute, record_hdr[curr]->second);
         #endif
 
         // Read statistics for each activity
@@ -137,37 +134,32 @@ int main(int argc, char ** argv) {
                 m += data_size;
             }
 
-            if (!first_record) {
+            fwrite((void *)&fal->id, sizeof(unsigned int), 1, target_file);
 
-                unsigned long long itv = record_hdr[curr]->uptime_cs - record_hdr[prev]->uptime_cs;
+            if (fal->id == A_CPU) {
+                // Print CPU stats
+                write_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini, target_file);
+            }
+            
+            else if (fal->id == A_MEMORY) {
+                // Print Memory stats
+                write_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev], target_file);
+            }
 
-                fwrite((void *)&fal->id, sizeof(unsigned int), 1, target_file);
+            else if (fal->id == A_PAGE) {
+                // Print Paging stats
+                write_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], target_file);
+            }
 
-                if (fal->id == A_CPU) {
-                    // Print CPU stats
-                    write_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini, target_file);
-                }
-                
-                else if (fal->id == A_MEMORY) {
-                    // Print Memory stats
-                    write_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev], target_file);
-                }
+            else if (fal->id == A_IO) {
+                // Print I/O stats
+                write_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], target_file);
+            }
 
-                else if (fal->id == A_PAGE) {
-                    // Print Paging stats
-                    write_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], target_file);
-                }
-
-                else if (fal->id == A_IO) {
-                    // Print I/O stats
-                    write_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], target_file);
-                }
-
-                else if (fal->id == A_QUEUE) {
-                    // Print Queue stats
-                    write_queue_stats((struct stats_queue *)act[p]->buf[curr], (struct stats_queue *)act[p]->buf[prev], target_file);
-                }
-            }            
+            else if (fal->id == A_QUEUE) {
+                // Print Queue stats
+                write_queue_stats((struct stats_queue *)act[p]->buf[curr], (struct stats_queue *)act[p]->buf[prev], target_file);
+            }
         }
 
         // Swap buffers
@@ -175,7 +167,6 @@ int main(int argc, char ** argv) {
         prev = curr;
         curr = tmp;
 
-        first_record = 0;
         records_read++;
     }
 

@@ -4,9 +4,11 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -I../sysstat-repo/
 
 # Target names and source files
-TARGET = reader
+TARGET = compressor
 
-SRC_FILES = $(TARGET).c pr_stats.c ../sysstat-repo/activity.c
+TARGET_FILE = target.bin
+
+SRC_FILES = $(TARGET).c wr_stats.c pr_stats.c ../sysstat-repo/activity.c
 
 FILE = file1.bin
 
@@ -41,6 +43,9 @@ $(TARGET): $(OBJS)
 
 run: $(TARGET)
 	./$(TARGET) $(FILE)
+
+run-comp:
+	./$(TARGET) $(FILE) $(TARGET_FILE)
 
 clean:
 	rm -f *.o $(TARGET)
