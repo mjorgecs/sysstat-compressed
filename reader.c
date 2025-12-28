@@ -1,5 +1,5 @@
-// Simplified version to demonstrate printing stats like sar
-// compile : gcc -Wall -Wextra -std=c99 -I sysstat-repo/ sysstat-repo/activity.c sa_common_stub.c read_file_simple.c -o read_file_simple -lm
+// Manual calculation version - demonstrates how to calculate CPU percentages
+// compile : gcc -Wall -Wextra -std=c99 -I ../sysstat-repo/ ../sysstat-repo/activity.c read_file_manual.c -o read_file_manual -lm
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,18 +9,17 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#include "sa.h"
 #include "pr_stats.h"
-#include "rd_stats.h"
-#include "version.h"
+#include "../sysstat-repo/sa.h"
+#include "../sysstat-repo/rd_stats.h"
+#include "../sysstat-repo/version.h"
 
 extern struct activity * act[];
-unsigned int id_seq[NR_ACT];
-uint64_t flags = 0x0000C000; // S_F_LOCAL_TIME | S_F_PREFD_TIME_OUTPUT
-struct record_header record_hdr[3];
 
-int get_pos(struct activity *act[], unsigned int act_flag)
-{
+struct record_header *record_hdr[2];
+
+
+int get_pos(struct activity *act[], unsigned int act_flag) {
 	int i;
 	for (i = 0; i < NR_ACT; i++) {
 		if (act[i]->id == act_flag)
@@ -29,8 +28,9 @@ int get_pos(struct activity *act[], unsigned int act_flag)
 	return -1;
 }
 
-int main(int argc, char ** argv) 
-{
+
+
+int main(int argc, char ** argv) {
     if(argc < 2) {
         fprintf(stderr, "Usage: %s <sa file>\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -50,17 +50,17 @@ int main(int argc, char ** argv)
 
     // Read file_header
     struct file_header *hdr = (struct file_header *)m;
-    printf("OS: %s %s\n", hdr->sa_sysname, hdr->sa_release);
-    printf("Host: %s\n", hdr->sa_nodename);
-    printf("CPUs: %d\n\n", hdr->sa_cpu_nr);
+    printf("Linux %s (%s) \t%02u/%02u/%d \t_x86_64_\t(%d CPU)\n\n",
+           hdr->sa_release, hdr->sa_nodename,
+           hdr->sa_month, hdr->sa_day, hdr->sa_year + 1900,
+           hdr->sa_cpu_nr > 1 ? hdr->sa_cpu_nr - 1 : 1);
     m += FILE_HEADER_SIZE;
     
     // Read file_activity list
-    int p, i, k;
+    int p, i, j, k;
     struct file_activity *fal = ((struct file_activity *)m);
     struct file_activity *file_actlst[hdr->sa_act_nr]; 
 
-    int j=0;
     for (i = 0; i < (int)hdr->sa_act_nr; i++, fal++, m += FILE_ACTIVITY_SIZE) {
         file_actlst[i] = fal;
         
@@ -82,30 +82,32 @@ int main(int argc, char ** argv)
         act[p]->buf[0] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
         act[p]->buf[1] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
         act[p]->nr_allocated = fal->nr;
-
-        if ((fal->magic == act[p]->magic)) {
-            id_seq[j++] = fal->id;
-        }
     }
-	while (j < NR_ACT) {
-		id_seq[j++] = 0;
-	}
+
 
     // Read records
     int curr = 1, prev = 0;
     int first_record = 1;
     int records_read = 0;
     
-    while (records_read < 5) {  // Read 5 records for demo
-        struct record_header *rh = ((struct record_header *) m);
-        memcpy(&record_hdr[curr], rh, RECORD_HEADER_SIZE);
+    while (1) {  // Read until EOF
+        // Check if we have enough space for a record header
+        if ((size_t)(m - m_start) + RECORD_HEADER_SIZE > (size_t)len) {
+            break;  // Not enough data left for another record
+        }
+
+        record_hdr[curr] = ((struct record_header *) m);
         m += RECORD_HEADER_SIZE;
         
+        if (!first_record) {
+            printf("\nTIME: %02u:%02u:%02u-------", record_hdr[curr]->hour, record_hdr[curr]->minute, record_hdr[curr]->second);
+        }
+
         // Read statistics for each activity
         __nr_t nr_value;
         for (i = 0; i < (int)hdr->sa_act_nr; i++) {
             fal = file_actlst[i];
-
+            
             if (fal->has_nr) {
                 nr_value = *((__nr_t *) m);
                 m += sizeof(__nr_t);
@@ -124,47 +126,50 @@ int main(int argc, char ** argv)
                 
                 m += data_size;
             }
-            else if (p >= 0) {
-                act[p]->nr[curr] = 0;
-            }
-        }
-        
-        // After first record, we can print stats
-        if (!first_record) {
-            // Calculate interval
-            unsigned long long itv;
-            get_itv_value(&record_hdr[curr], &record_hdr[prev], &itv);
-            
-            // Print timestamp
-            printf("%02u:%02u:%02u  ", rh->hour, rh->minute, rh->second);
-            
-            // Print each selected activity using its print function
-            for (i = 0; i < NR_ACT; i++) {
-                if (!id_seq[i])
-                    continue;
-                
-                // Find activity position
-                for (p = 0; p < NR_ACT; p++) {
-                    if (act[p]->id == id_seq[i])
-                        break;
+
+            if (!first_record) {
+
+                unsigned long long itv = record_hdr[curr]->uptime_cs - record_hdr[prev]->uptime_cs;
+
+                if (fal->id == A_CPU) {
+                    // Print CPU stats
+                    print_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini);
                 }
                 
-                if (p < NR_ACT && act[p]->nr[curr] > 0 && act[p]->f_print) {
-                    // This calls the activity's print function which formats the output
-                    (*act[p]->f_print)(act[p], prev, curr, itv);
+                if (fal->id == A_MEMORY) {
+                    // Print Memory stats
+                    print_memory_stats((struct stats_memory *)act[p]->buf[curr]);
                 }
-            }
-            printf("\n");
+
+                else if (fal->id == A_PAGE) {
+                    // Print Paging stats
+                    print_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], itv);
+                }
+
+                else if (fal->id == A_IO) {
+                    // Print I/O stats
+                    print_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], itv);
+                }
+
+                else if (fal->id == A_QUEUE) {
+                    // Print Swap stats
+                    print_queue_stats((struct stats_queue *)act[p]->buf[curr]);
+                }
+            }            
         }
-        
-        first_record = 0;
-        records_read++;
-        
+
         // Swap buffers
         int tmp = prev;
         prev = curr;
         curr = tmp;
+
+        first_record = 0;
+        records_read++;
     }
+
+    //printf("final size: %zu bytes\n", (size_t)(m - m_start));
+    //printf("total records read: %d\n", records_read);
+
 
     // Cleanup
     for (i = 0; i < NR_ACT; i++) {
@@ -178,8 +183,9 @@ int main(int argc, char ** argv)
 			act[i]->nr_allocated = 0;
 		}
     }
-    
+
     munmap(m_start, len);
     close(fd);
+    
     return 0;
 }
