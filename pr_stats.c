@@ -99,3 +99,30 @@ void print_memory_stats(struct stats_memory *smc) {
             mem_frmkb, mem_availablekb, mem_used, pc_used, mem_bufkb, 
             mem_camkb, mem_comkb, pc_commit, mem_activekb, mem_inactkb, mem_dirtykb, mem_shmemkb);
 }
+
+void print_paging_stats(struct stats_paging *spc, struct stats_paging *spp, unsigned long long itv) {
+    struct stats_paging *curr = spc;
+    struct stats_paging *prev = spp;
+
+	if (!itv) {	/* Paranoia checking */
+		itv = 1;
+	}
+
+    printf("\n%-12s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n",
+            "PAGING", "pgpgin/s", "pgpgout/s", "fault/s", "majflt/s", "pgfree/s", "pgscank/s", "pgscand/s", "pgsteal/s", "pgprom/s", "pgdem/s");    
+    
+    printf("%-12s  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f\n",
+        "",
+        S_VALUE(prev->pgpgin, curr->pgpgin, itv),
+        S_VALUE(prev->pgpgout, curr->pgpgout, itv),
+        S_VALUE(prev->pgfault, curr->pgfault, itv),
+        S_VALUE(prev->pgmajfault, curr->pgmajfault, itv),
+        S_VALUE(prev->pgfree, curr->pgfree, itv),
+        S_VALUE(prev->pgscan_kswapd, curr->pgscan_kswapd, itv),
+        S_VALUE(prev->pgscan_direct, curr->pgscan_direct, itv),
+        S_VALUE(prev->pgsteal, curr->pgsteal, itv),
+        S_VALUE(prev->pgpromote, curr->pgpromote, itv),
+        S_VALUE(prev->pgdemote, curr->pgdemote, itv)
+    );
+}
+

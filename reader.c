@@ -9,11 +9,14 @@
 #include <sys/stat.h>
 #include <string.h>
 
+#include "pr_stats.h"
 #include "../sysstat-repo/sa.h"
 #include "../sysstat-repo/rd_stats.h"
 #include "../sysstat-repo/version.h"
 
 extern struct activity * act[];
+
+struct record_header *record_hdr[2];
 
 
 int get_pos(struct activity *act[], unsigned int act_flag) {
@@ -93,11 +96,11 @@ int main(int argc, char ** argv) {
             break;  // Not enough data left for another record
         }
 
-        struct record_header *rh = ((struct record_header *) m);
+        record_hdr[curr] = ((struct record_header *) m);
         m += RECORD_HEADER_SIZE;
         
         if (!first_record) {
-            printf("\nTIME: %02u:%02u:%02u-------", rh->hour, rh->minute, rh->second);
+            printf("\nTIME: %02u:%02u:%02u-------", record_hdr[curr]->hour, record_hdr[curr]->minute, record_hdr[curr]->second);
         }
 
         // Read statistics for each activity
@@ -126,6 +129,8 @@ int main(int argc, char ** argv) {
 
             if (!first_record) {
 
+                unsigned long long itv = record_hdr[curr]->uptime_cs - record_hdr[prev]->uptime_cs;
+
                 if (fal->id == A_CPU) {
                     // Print CPU stats
                     print_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini);
@@ -134,6 +139,11 @@ int main(int argc, char ** argv) {
                 if (fal->id == A_MEMORY) {
                     // Print Memory stats
                     print_memory_stats((struct stats_memory *)act[p]->buf[curr]);
+                }
+
+                if (fal->id == A_PAGE) {
+                    // Print Paging stats
+                    print_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], itv);
                 }
             }            
         }
