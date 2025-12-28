@@ -1,4 +1,4 @@
-#include "pr_stats.h"
+#include "utils.h"
 
 
 void print_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu) {

@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#include "pr_stats.h"
+#include "utils.h"
 #include "../sysstat-repo/sa.h"
 #include "../sysstat-repo/rd_stats.h"
 #include "../sysstat-repo/version.h"
@@ -145,27 +145,27 @@ int main(int argc, char ** argv) {
 
                 if (fal->id == A_CPU) {
                     // Print CPU stats
-                    print_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini);
+                    write_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini, target_file);
                 }
                 
                 else if (fal->id == A_MEMORY) {
                     // Print Memory stats
-                    print_memory_stats((struct stats_memory *)act[p]->buf[curr]);
+                    write_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev], target_file);
                 }
 
                 else if (fal->id == A_PAGE) {
                     // Print Paging stats
-                    print_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], itv);
+                    write_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], target_file);
                 }
 
                 else if (fal->id == A_IO) {
                     // Print I/O stats
-                    print_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], itv);
+                    write_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], target_file);
                 }
 
                 else if (fal->id == A_QUEUE) {
                     // Print Queue stats
-                    print_queue_stats((struct stats_queue *)act[p]->buf[curr]);
+                    write_queue_stats((struct stats_queue *)act[p]->buf[curr], (struct stats_queue *)act[p]->buf[prev], target_file);
                 }
             }            
         }
@@ -194,6 +194,7 @@ int main(int argc, char ** argv) {
 
     munmap(m_start, len);
     close(fd);
+    fclose(target_file);
     
     return 0;
 }

@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#include "pr_stats.h"
+#include "utils.h"
 #include "../sysstat-repo/sa.h"
 #include "../sysstat-repo/rd_stats.h"
 #include "../sysstat-repo/version.h"

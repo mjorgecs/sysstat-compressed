@@ -1,6 +1,4 @@
-#include "pr_stats.h"
-
-#include "pr_stats.h"
+#include "utils.h"
 
 #define N_QUEUE 6
 #define N_IO 7
@@ -8,53 +6,42 @@
 #define N_MEMORY 18
 #define N_CPU 10
 
-void print_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu) {
+void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd) {
     
+    #ifdef VERBOSE
     printf("\n%-12s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n",
-            "CPU", "%usr", "%nice", "%system", "%iowait", "%steal", "%irq", "%soft", "%guest", "%gnice", "%idle");
+            "CPU", "user", "nice", "system", "idle", "iowait", "steal", "hardirq", "softirq", "guest", "gnice");
+    #endif
 
     for (int i = 0; i < nr_cpu; i++) {
         struct stats_cpu *curr = &scc[i];
         struct stats_cpu *prev = &scp[i];
-        
-        // Calculate deltas
-        unsigned long long tot_jiffies = 0;
-        unsigned long long tot_jiffies_p = 0;
-        
-        // Current totals
-        tot_jiffies = curr->cpu_user + curr->cpu_nice + curr->cpu_sys +
-                      curr->cpu_idle + curr->cpu_iowait + curr->cpu_hardirq +
-                      curr->cpu_softirq + curr->cpu_steal;
 
-        // Previous totals
-        tot_jiffies_p = prev->cpu_user + prev->cpu_nice + prev->cpu_sys +
-                        prev->cpu_idle + prev->cpu_iowait + prev->cpu_hardirq +
-                        prev->cpu_softirq + prev->cpu_steal;
-        
-        // Calculate difference
-        unsigned long long diff_total = tot_jiffies - tot_jiffies_p;
-        
-        if (diff_total == 0) {
-            diff_total = 1;  // Avoid division by zero
+        long deltas[N_CPU] = {
+            (long)(curr->cpu_user - prev->cpu_user),
+            (long)(curr->cpu_nice - prev->cpu_nice),
+            (long)(curr->cpu_sys - prev->cpu_sys),
+            (long)(curr->cpu_idle - prev->cpu_idle),
+            (long)(curr->cpu_iowait - prev->cpu_iowait),
+            (long)(curr->cpu_steal - prev->cpu_steal),
+            (long)(curr->cpu_hardirq - prev->cpu_hardirq),
+            (long)(curr->cpu_softirq - prev->cpu_softirq),
+            (long)(curr->cpu_guest - prev->cpu_guest),
+            (long)(curr->cpu_guest_nice - prev->cpu_guest_nice)
+        };
+
+        for (int j = 0; j < N_CPU; j++) {
+            fwrite((void *)&deltas[j], sizeof(long), 1, fd);
         }
         
-        // Calculate percentages
-        double pc_user = (double)(curr->cpu_user - prev->cpu_user) * 100.0 / diff_total;
-        double pc_nice = (double)(curr->cpu_nice - prev->cpu_nice) * 100.0 / diff_total;
-        double pc_sys = (double)(curr->cpu_sys - prev->cpu_sys) * 100.0 / diff_total;
-        double pc_idle = (double)(curr->cpu_idle - prev->cpu_idle) * 100.0 / diff_total;
-        double pc_iowait = (double)(curr->cpu_iowait - prev->cpu_iowait) * 100.0 / diff_total;
-        double pc_steal = (double)(curr->cpu_steal - prev->cpu_steal) * 100.0 / diff_total;
-        double pc_irq = (double)(curr->cpu_hardirq - prev->cpu_hardirq) * 100.0 / diff_total;
-        double pc_soft = (double)(curr->cpu_softirq - prev->cpu_softirq) * 100.0 / diff_total;
-        double pc_guest = (double)(curr->cpu_guest - prev->cpu_guest) * 100.0 / diff_total;
-        double pc_gnice = (double)(curr->cpu_guest_nice - prev->cpu_guest_nice) * 100.0 / diff_total;
-        
+        #ifdef VERBOSE
         // Print CPU name (all for first, then individual CPUs)
         if (i == 0) {
-            printf("%-12s", "all");
-            printf("  %5.2f  %5.2f  %5.2f  %5.2f   %5.2f  %5.2f  %5.2f   %5.2f   %5.2f  %5.2f\n",
-                    pc_user, pc_nice, pc_sys, pc_iowait, pc_steal, pc_irq, pc_soft, pc_guest, pc_gnice, pc_idle);
+            printf("%-12s", "all-delta");
+            printf("  %5ld  %5ld  %5ld  %5ld   %5ld  %5ld  %5ld   %5ld   %5ld  %5ld\n",
+                    deltas[0], deltas[1], deltas[2], deltas[3], deltas[4], deltas[5], deltas[6], deltas[7], deltas[8], deltas[9]);
+            /* show only all cpus*/
+            break;
 
         } /*else {
             printf("%-12d", i - 1);
@@ -62,11 +49,11 @@ void print_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu) {
             pc_user, pc_nice, pc_sys, pc_iowait, pc_steal, 
             pc_irq, pc_soft, pc_guest, pc_gnice, pc_idle);
         }*/
-        
+        #endif        
     }
 }
 
-void print_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE *fd) {
+void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE *fd) {
     
     struct stats_memory *curr = smc;
     struct stats_memory *prev = smp;
@@ -126,7 +113,7 @@ void print_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE
     #endif
 }
 
-void print_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE *fd) {
+void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE *fd) {
     struct stats_paging *curr = spc;
     struct stats_paging *prev = spp;
 
