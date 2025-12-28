@@ -9,10 +9,10 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#include "sa.h"
-#include "pr_stats.h"
-#include "rd_stats.h"
-#include "version.h"
+#include "../sysstat-repo/sa.h"
+#include "../sysstat-repo/pr_stats.h"
+#include "../sysstat-repo/rd_stats.h"
+#include "../sysstat-repo/version.h"
 
 extern struct activity * act[];
 unsigned int id_seq[NR_ACT];

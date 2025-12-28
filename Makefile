@@ -1,4 +1,4 @@
-CFLAGS=-Wall -Wextra -std=c99 -I sysstat-repo/ sysstat-repo/activity.c
+CFLAGS=-Wall -Wextra -std=c99 -I ../sysstat-repo/ ../sysstat-repo/activity.c
 
 all: read_file
 

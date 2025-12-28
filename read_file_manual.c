@@ -1,5 +1,5 @@
 // Manual calculation version - demonstrates how to calculate CPU percentages
-// compile : gcc -Wall -Wextra -std=c99 -I sysstat-repo/ read_file_manual.c -o read_file_manual -lm
+// compile : gcc -Wall -Wextra -std=c99 -I ../sysstat-repo/ ../sysstat-repo/activity.c read_file_manual.c -o read_file_manual -lm
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,26 +9,23 @@
 #include <sys/stat.h>
 #include <string.h>
 
-#include "sa.h"
-#include "rd_stats.h"
-
-#include "pr_stats.h"
-#include "version.h"
+#include "../sysstat-repo/sa.h"
+#include "../sysstat-repo/rd_stats.h"
+#include "../sysstat-repo/version.h"
 
 extern struct activity * act[];
 
-int get_pos_simple(unsigned int act_id, struct file_activity *file_actlst[], int sa_act_nr)
-{
-	for (int i = 0; i < sa_act_nr; i++) {
-		if (file_actlst[i]->id == act_id)
+
+int get_pos(struct activity *act[], unsigned int act_flag) {
+	int i;
+	for (i = 0; i < NR_ACT; i++) {
+		if (act[i]->id == act_flag)
 			return i;
 	}
 	return -1;
 }
 
-void print_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, unsigned long long itv)
-{
-    (void)itv; // Unused - we calculate from jiffies directly
+void print_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu) {
     
     printf("\n%-12s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n",
            "CPU", "%usr", "%nice", "%system", "%iowait", "%steal", "%irq", "%soft", "%guest", "%gnice", "%idle");
@@ -89,12 +86,11 @@ void print_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, u
     }
 }
 
-void print_memory_stats(struct stats_memory *smc, struct stats_memory *smp)
-{
+void print_memory_stats(struct stats_memory *smc, struct stats_memory *smp) {
     (void)smp; // Unused for now
     
     printf("\n%-12s  %12s  %12s  %12s  %9s  %12s  %12s\n",
-           "", "kbmemfree", "kbavail", "kbmemused", "%memused", 
+           "MEMORY", "kbmemfree", "kbavail", "kbmemused", "%memused", 
            "kbbuffers", "kbcached");
     
     unsigned long long mem_total = smc->tlmkb;
@@ -104,13 +100,12 @@ void print_memory_stats(struct stats_memory *smc, struct stats_memory *smp)
     double pc_used = mem_total ? (double)mem_used * 100.0 / mem_total : 0.0;
     
     printf("%-12s  %12llu  %12llu  %12llu  %9.2f  %12llu  %12llu\n",
-           "",
+           "kb",
            mem_free, mem_avail, mem_used, pc_used,
            smc->bufkb, smc->camkb);
 }
 
-int main(int argc, char ** argv) 
-{
+int main(int argc, char ** argv) {
     if(argc < 2) {
         fprintf(stderr, "Usage: %s <sa file>\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -125,6 +120,7 @@ int main(int argc, char ** argv)
     void * m = m_start;
     
     // Read file_magic
+    struct file_magic *magic = (struct file_magic *)m;
     m += FILE_MAGIC_SIZE;
 
     // Read file_header
@@ -136,32 +132,42 @@ int main(int argc, char ** argv)
     m += FILE_HEADER_SIZE;
     
     // Read file_activity list
+    int p, i, j, k;
+    struct file_activity *fal = ((struct file_activity *)m);
     struct file_activity *file_actlst[hdr->sa_act_nr]; 
-    for (int i = 0; i < (int)hdr->sa_act_nr; i++) {
-        file_actlst[i] = (struct file_activity *)m;
-        m += FILE_ACTIVITY_SIZE;
-    }
 
-    // Find CPU and Memory activities
-    int cpu_pos = get_pos_simple(A_CPU, file_actlst, hdr->sa_act_nr);
-    int mem_pos = get_pos_simple(A_MEMORY, file_actlst, hdr->sa_act_nr);
-    
-    if (cpu_pos < 0) {
-        fprintf(stderr, "CPU activity not found\n");
-        exit(1);
-    }
+    for (i = 0; i < (int)hdr->sa_act_nr; i++, fal++, m += FILE_ACTIVITY_SIZE) {
+        file_actlst[i] = fal;
+        
+        if ((p = get_pos(act, fal->id)) < 0)
+			continue;
 
-    // Allocate buffers for CPU stats
-    int nr_cpu = file_actlst[cpu_pos]->nr;
-    struct stats_cpu *cpu_curr = malloc(sizeof(struct stats_cpu) * nr_cpu);
-    struct stats_cpu *cpu_prev = malloc(sizeof(struct stats_cpu) * nr_cpu);
-    
-    // Allocate buffers for memory stats
-    struct stats_memory *mem_curr = malloc(sizeof(struct stats_memory));
-    struct stats_memory *mem_prev = malloc(sizeof(struct stats_memory));
+        // Set activity attributes
+        for (k = 0; k < 3; k++) {
+			act[p]->ftypes_nr[k] = fal->types_nr[k];
+		}
+		if (fal->size > act[p]->msize) {
+			act[p]->msize = fal->size;
+		}
+		act[p]->nr_ini = fal->nr;
+		act[p]->nr2    = fal->nr2;
+		act[p]->fsize  = fal->size;
+
+        // Allocate buffers for curr and prev
+        act[p]->buf[0] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
+        act[p]->buf[1] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
+        act[p]->nr_allocated = fal->nr;
+
+
+        if ((fal->magic == act[p]->magic)) {
+            printf("Activity %s (id: %u) found. size: %d, nr: %u, nr2: %u\n",
+                   act[p]->name, fal->id, fal->size, fal->nr, fal->nr2);
+        }
+    }
 
 
     // Read records
+    int curr = 1, prev = 0;
     int first_record = 1;
     int records_read = 0;
     
@@ -170,15 +176,19 @@ int main(int argc, char ** argv)
         if ((size_t)(m - m_start) + RECORD_HEADER_SIZE > (size_t)len) {
             break;  // Not enough data left for another record
         }
-        
+
         struct record_header *rh = ((struct record_header *) m);
         m += RECORD_HEADER_SIZE;
         
+        if (!first_record) {
+            printf("\nTIME: %02u:%02u:%02u-------", rh->hour, rh->minute, rh->second);
+        }
+
         // Read statistics for each activity
-        for (int i = 0; i < (int)hdr->sa_act_nr; i++) {
-            struct file_activity *fal = file_actlst[i];
+        __nr_t nr_value;
+        for (i = 0; i < (int)hdr->sa_act_nr; i++) {
+            fal = file_actlst[i];
             
-            __nr_t nr_value;
             if (fal->has_nr) {
                 nr_value = *((__nr_t *) m);
                 m += sizeof(__nr_t);
@@ -187,62 +197,59 @@ int main(int argc, char ** argv)
                 nr_value = fal->nr;
             }
 
-            if (nr_value > 0) {
-                size_t data_size = (size_t)fal->size * (size_t)nr_value * (size_t)fal->nr2;
+            p = get_pos(act, fal->id);
+            if (nr_value > 0 && p >= 0) {
+                size_t data_size = (size_t) act[p]->fsize * (size_t) nr_value * (size_t) act[p]->nr2;
                 
-                // Save CPU data (all CPUs at once)
-                if (i == cpu_pos) {
-                    memcpy(first_record ? cpu_prev : cpu_curr, m, data_size);
-                }
+                // Copy data
+                memcpy(act[p]->buf[curr], m, data_size);
+                act[p]->nr[curr] = nr_value;
                 
-                // Save Memory data (single structure)
-                else if (i == mem_pos) {
-                    memcpy(first_record ? mem_prev : mem_curr, m, data_size);
-                }
-                
-
-
-
                 m += data_size;
             }
+
+            if (!first_record) {
+
+                if (fal->id == A_CPU) {
+                    // Print CPU stats
+                    print_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini);
+                }
+                
+                if (fal->id == A_MEMORY) {
+                    // Print Memory stats
+                    print_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev]);
+                }
+            }            
         }
-        
-        // After first record, we can print stats
-        if (!first_record) {
-            printf("\n%02u:%02u:%02u", rh->hour, rh->minute, rh->second);
-            
-            // Print CPU stats
-            print_cpu_stats(cpu_curr, cpu_prev, nr_cpu, 100);
-            
-            // Print Memory stats if available
-            if (mem_pos >= 0) {
-                print_memory_stats(mem_curr, mem_prev);
-            }
-            
-            // Swap buffers
-            struct stats_cpu *tmp_cpu = cpu_prev;
-            cpu_prev = cpu_curr;
-            cpu_curr = tmp_cpu;
-            
-            struct stats_memory *tmp_mem = mem_prev;
-            mem_prev = mem_curr;
-            mem_curr = tmp_mem;
-        }
-        
+
+        // Swap buffers
+        int tmp = prev;
+        prev = curr;
+        curr = tmp;
+
         first_record = 0;
         records_read++;
     }
 
-    printf("final size: %zu bytes\n", (size_t)(m - m_start));
-    printf("total records read: %d\n", records_read);
+    //printf("final size: %zu bytes\n", (size_t)(m - m_start));
+    //printf("total records read: %d\n", records_read);
+
+
     // Cleanup
-    free(cpu_curr);
-    free(cpu_prev);
-    free(mem_curr);
-    free(mem_prev);
+    for (i = 0; i < NR_ACT; i++) {
+		if (act[i]->nr_allocated > 0) {
+			for (j = 0; j < 2; j++) {
+				if (act[i]->buf[j]) {
+					free(act[i]->buf[j]);
+					act[i]->buf[j] = NULL;
+				}
+			}
+			act[i]->nr_allocated = 0;
+		}
+    }
+
     munmap(m_start, len);
     close(fd);
     
-    printf("\n");
     return 0;
 }
