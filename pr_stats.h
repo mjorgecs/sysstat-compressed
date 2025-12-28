@@ -17,3 +17,4 @@ void print_memory_stats(struct stats_memory *smc);
 
 void print_paging_stats(struct stats_paging *spc, struct stats_paging *spp, unsigned long long itv);
 
+void print_io_stats(struct stats_io *sic, struct stats_io *sip, unsigned long long itv);

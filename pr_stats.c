@@ -98,6 +98,18 @@ void print_memory_stats(struct stats_memory *smc) {
             "kB",
             mem_frmkb, mem_availablekb, mem_used, pc_used, mem_bufkb, 
             mem_camkb, mem_comkb, pc_commit, mem_activekb, mem_inactkb, mem_dirtykb, mem_shmemkb);
+
+    double pc_swpused = mem_tlskb ? SP_VALUE(mem_frskb, mem_tlskb, mem_tlskb) : 0.0;
+    double pc_swpcad = (mem_tlskb - mem_frskb) ? SP_VALUE(0, mem_caskb, mem_tlskb - mem_frskb) : 0.0;
+
+    /* Print swap memory statistics */
+    printf("\n%-12s  %12s  %12s  %9s  %12s  %9s\n",
+           "SWAP MEMORY", 
+           "kbswpfree", "kbswpused", "%swpused", "kbswpcad", "%swpcad");
+
+    printf("%-12s  %12llu  %12llu  %9.2f  %12llu  %9.2f\n",
+            "kB",
+            mem_frskb, mem_tlskb - mem_frskb, pc_swpused, mem_caskb, pc_swpcad);
 }
 
 void print_paging_stats(struct stats_paging *spc, struct stats_paging *spp, unsigned long long itv) {
@@ -126,3 +138,34 @@ void print_paging_stats(struct stats_paging *spc, struct stats_paging *spp, unsi
     );
 }
 
+void print_io_stats(struct stats_io *sic, struct stats_io *sip, unsigned long long itv) {
+    struct stats_io *curr = sic;
+    struct stats_io *prev = sip;
+
+    if (!itv) {	/* Paranoia checking */
+        itv = 1;
+    }
+
+    /* Print io statistics */
+    printf("\n%-12s  %9s  %9s  %9s  %9s  %9s  %9s  %9s\n",
+           "IO", 
+           "tps", "rtps", "wtps", "dtps", "bread/s", "bwrtn/s", "bdscd/s");
+
+    printf("%-12s  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f\n",
+            "",
+            sic->dk_drive < sip->dk_drive ? 0.0 :
+            S_VALUE(sip->dk_drive, sic->dk_drive, itv),
+            sic->dk_drive_rio < sip->dk_drive_rio ? 0.0 :
+            S_VALUE(sip->dk_drive_rio, sic->dk_drive_rio, itv),
+            sic->dk_drive_wio < sip->dk_drive_wio ? 0.0 :
+            S_VALUE(sip->dk_drive_wio, sic->dk_drive_wio, itv),
+            sic->dk_drive_dio < sip->dk_drive_dio ? 0.0 :
+            S_VALUE(sip->dk_drive_dio, sic->dk_drive_dio, itv),
+            sic->dk_drive_rblk < sip->dk_drive_rblk ? 0.0 :
+            S_VALUE(sip->dk_drive_rblk, sic->dk_drive_rblk, itv),
+            sic->dk_drive_wblk < sip->dk_drive_wblk ? 0.0 :
+            S_VALUE(sip->dk_drive_wblk, sic->dk_drive_wblk, itv),
+            sic->dk_drive_dblk < sip->dk_drive_dblk ? 0.0 :
+            S_VALUE(sip->dk_drive_dblk, sic->dk_drive_dblk, itv)
+        );
+}

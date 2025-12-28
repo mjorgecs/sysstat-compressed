@@ -141,9 +141,19 @@ int main(int argc, char ** argv) {
                     print_memory_stats((struct stats_memory *)act[p]->buf[curr]);
                 }
 
-                if (fal->id == A_PAGE) {
+                else if (fal->id == A_PAGE) {
                     // Print Paging stats
                     print_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], itv);
+                }
+
+                else if (fal->id == A_IO) {
+                    // Print I/O stats
+                    print_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], itv);
+                }
+
+                else if (fal->id == A_SWAP) {
+                    // Print Swap stats
+                    //print_swap_stats((struct stats_swap *)act[p]->buf[curr], (struct stats_swap *)act[p]->buf[prev], itv);
                 }
             }            
         }
