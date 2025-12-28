@@ -151,9 +151,9 @@ int main(int argc, char ** argv) {
                     print_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], itv);
                 }
 
-                else if (fal->id == A_SWAP) {
+                else if (fal->id == A_QUEUE) {
                     // Print Swap stats
-                    //print_swap_stats((struct stats_swap *)act[p]->buf[curr], (struct stats_swap *)act[p]->buf[prev], itv);
+                    print_queue_stats((struct stats_queue *)act[p]->buf[curr]);
                 }
             }            
         }

@@ -120,7 +120,7 @@ void print_paging_stats(struct stats_paging *spc, struct stats_paging *spp, unsi
 		itv = 1;
 	}
 
-    printf("\n%-12s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n",
+    printf("\n%-12s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s\n",
             "PAGING", "pgpgin/s", "pgpgout/s", "fault/s", "majflt/s", "pgfree/s", "pgscank/s", "pgscand/s", "pgsteal/s", "pgprom/s", "pgdem/s");    
     
     printf("%-12s  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f  %9.2f\n",
@@ -169,3 +169,30 @@ void print_io_stats(struct stats_io *sic, struct stats_io *sip, unsigned long lo
             S_VALUE(sip->dk_drive_dblk, sic->dk_drive_dblk, itv)
         );
 }
+
+void print_queue_stats(struct stats_queue *sqc) {
+    struct stats_queue *curr = sqc;
+
+    unsigned long long
+        nr_running    = curr->nr_running,
+        nr_threads    = curr->nr_threads,
+        load_avg_1    = curr->load_avg_1,
+        load_avg_5    = curr->load_avg_5,
+        load_avg_15   = curr->load_avg_15,
+        procs_blocked = curr->procs_blocked;
+
+    printf("\n%-12s  %12s  %12s  %9s  %9s  %9s  %12s\n",
+            "QUEUE", 
+            "runq-sz", "plist-sz", "ldavg-1", "ldavg-5", "ldavg-15", "blocked");    
+    
+    printf("%-12s  %12llu  %12llu  %9.2f  %9.2f  %9.2f  %12llu\n",
+        "",
+        nr_running,
+        nr_threads,
+        (double)load_avg_1 / 100.0,
+        (double)load_avg_5 / 100.0,
+        (double)load_avg_15 / 100.0,
+        procs_blocked
+    );
+}
+
