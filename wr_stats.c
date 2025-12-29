@@ -2,24 +2,22 @@
 
 
 void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd, int first_record) {
-    
-    if (first_record) {
-        fwrite((void*)&nr_cpu, sizeof(int), 1, fd);
-        // only write the all cpu stats
-        fwrite((void*) &scc[0], sizeof(struct stats_cpu), 1, fd);
-        return;
-    }
-
+        
     #ifdef VERBOSE
     printf("\n%-12s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n",
-            "CPU", "user", "nice", "system", "idle", "iowait", "steal", "hardirq", "softirq", "guest", "gnice");
-    #endif
-
-    for (int i = 0; i < nr_cpu; i++) {
-        struct stats_cpu *curr = &scc[i];
-        struct stats_cpu *prev = &scp[i];
-
-        long deltas[N_CPU] = {
+        "CPU", "user", "nice", "system", "idle", "iowait", "steal", "hardirq", "softirq", "guest", "gnice");
+        #endif
+        
+        for (int i = 0; i < nr_cpu; i++) {
+            struct stats_cpu *curr = &scc[i];
+            struct stats_cpu *prev = &scp[i];
+            
+            if (first_record) {
+                // only write the all cpu stats
+                fwrite((void*) curr, sizeof(struct stats_cpu), 1, fd);
+                return;
+            }
+            long deltas[N_CPU] = {
             (long)(curr->cpu_user - prev->cpu_user),
             (long)(curr->cpu_nice - prev->cpu_nice),
             (long)(curr->cpu_sys - prev->cpu_sys),
