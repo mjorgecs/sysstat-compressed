@@ -29,14 +29,14 @@ void print_io_stats(struct stats_io *sic, struct stats_io *sip, unsigned long lo
 
 void print_queue_stats(struct stats_queue *sqc);
 
-void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd);
+void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd, int first_record);
 
-void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE *fd);
+void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE *fd, int first_record);
 
-void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE *fd);
+void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE *fd, int first_record);
 
-void write_io_stats(struct stats_io *sic, struct stats_io *sip, FILE *fd);
+void write_io_stats(struct stats_io *sic, struct stats_io *sip, FILE *fd, int first_record);
 
-void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *fd);
+void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *fd, int first_record);
 
 int get_pos(struct activity *act[], unsigned int act_flag);

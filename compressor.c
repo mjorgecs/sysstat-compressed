@@ -83,6 +83,7 @@ int main(int argc, char ** argv) {
     // Read records
     int curr = 1, prev = 0;
     int records_read = 0;
+    int first_record = 1;
     
     while (1) {  // Read until EOF
         // Check if we have enough space for a record header
@@ -126,27 +127,30 @@ int main(int argc, char ** argv) {
 
             if (fal->id == A_CPU) {
                 // Print CPU stats
-                write_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini, target_file);
+                write_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], 
+                                act[p]->nr_ini, target_file, first_record);
             }
             
             else if (fal->id == A_MEMORY) {
                 // Print Memory stats
-                write_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev], target_file);
+                write_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev], 
+                                    target_file, first_record);
             }
 
             else if (fal->id == A_PAGE) {
                 // Print Paging stats
-                write_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], target_file);
+                write_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], 
+                                    target_file, first_record);
             }
 
             else if (fal->id == A_IO) {
                 // Print I/O stats
-                write_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], target_file);
+                write_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], target_file, first_record);
             }
 
             else if (fal->id == A_QUEUE) {
                 // Print Queue stats
-                write_queue_stats((struct stats_queue *)act[p]->buf[curr], (struct stats_queue *)act[p]->buf[prev], target_file);
+                write_queue_stats((struct stats_queue *)act[p]->buf[curr], (struct stats_queue *)act[p]->buf[prev], target_file, first_record);
             }
         }
 

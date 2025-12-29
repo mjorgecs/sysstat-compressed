@@ -6,8 +6,15 @@
 #define N_MEMORY 18
 #define N_CPU 10
 
-void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd) {
+void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd, int first_record) {
     
+    if (first_record) {
+        fwrite((void*)&nr_cpu, sizeof(int), 1, fd);
+        // only write the all cpu stats
+        fwrite((void*) &scc[0], sizeof(struct stats_cpu), 1, fd);
+        return;
+    }
+
     #ifdef VERBOSE
     printf("\n%-12s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n",
             "CPU", "user", "nice", "system", "idle", "iowait", "steal", "hardirq", "softirq", "guest", "gnice");
@@ -52,10 +59,15 @@ void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, F
     }
 }
 
-void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE *fd) {
+void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE *fd, int first_record) {
     
     struct stats_memory *curr = smc;
     struct stats_memory *prev = smp;
+
+    if (first_record) {
+        fwrite((void*)smc, sizeof(struct stats_memory), 1, fd);
+        return;
+    }
 
     long deltas[N_MEMORY] = {
         (long) (curr->frmkb - prev->frmkb),
@@ -111,9 +123,14 @@ void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE
     #endif
 }
 
-void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE *fd) {
+void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE *fd, int first_record) {
     struct stats_paging *curr = spc;
     struct stats_paging *prev = spp;
+
+    if (first_record) {
+        fwrite((void*)spc, sizeof(struct stats_paging), 1, fd);
+        return;
+    }
 
     long deltas[N_PAGING] = {
         (long) (curr->pgpgin - prev->pgpgin),
@@ -141,9 +158,14 @@ void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE
     #endif
 }
 
-void write_io_stats(struct stats_io *sic, struct stats_io *sip, FILE *fd) {
+void write_io_stats(struct stats_io *sic, struct stats_io *sip, FILE *fd, int first_record) {
     struct stats_io *curr = sic;
     struct stats_io *prev = sip;
+
+    if (first_record) {
+        fwrite((void*)sic, sizeof(struct stats_io), 1, fd);
+        return;
+    }
 
     long deltas[N_IO] = {
         (long) (curr->dk_drive - prev->dk_drive),
@@ -170,10 +192,15 @@ void write_io_stats(struct stats_io *sic, struct stats_io *sip, FILE *fd) {
     #endif
 }
 
-void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *fd) {
+void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *fd, int first_record) {
 
     struct stats_queue *curr = sqc;
     struct stats_queue *prev = sqp;
+
+    if (first_record) {
+        fwrite((void*)sqc, sizeof(struct stats_queue), 1, fd);
+        return;
+    }
 
     long deltas[N_QUEUE] = {
         (long) (curr->nr_running - prev->nr_running),
