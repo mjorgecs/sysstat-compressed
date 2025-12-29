@@ -114,6 +114,15 @@ int main(int argc, char ** argv) {
         records_read++;
     }
 
+    // Cleanup
+    for (i = 0; i < 2; i++) {
+        free(cpu[i]);
+        free(memory[i]);
+        free(paging[i]);
+        free(io[i]);
+        free(queue[i]);
+    }
+
     munmap(m_start, len);
     close(fd);
     fclose(target_file);
