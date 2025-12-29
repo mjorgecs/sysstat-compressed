@@ -158,7 +158,7 @@ int main(int argc, char ** argv) {
         int tmp = prev;
         prev = curr;
         curr = tmp;
-
+        first_record = 0;
         records_read++;
     }
 
