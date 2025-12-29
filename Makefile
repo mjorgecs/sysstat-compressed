@@ -8,7 +8,7 @@ TARGET = compressor
 
 TARGET_FILE = target.bin
 
-SRC_FILES = $(TARGET).c wr_stats.c pr_stats.c ../sysstat-repo/activity.c
+SRC_FILES = $(TARGET).c wr_stats.c helper.c pr_stats.c ../sysstat-repo/activity.c
 
 FILE = file1.bin
 

@@ -1,6 +1,14 @@
 #include "../sysstat-repo/sa.h"
 #include "../sysstat-repo/rd_stats.h"
 
+
+
+#define N_QUEUE 6
+#define N_IO 7
+#define N_PAGING 10
+#define N_MEMORY 18
+#define N_CPU 10
+
 /*
  * Macros used to display statistics values.
  *
@@ -31,3 +39,4 @@ void write_io_stats(struct stats_io *sic, struct stats_io *sip, FILE *fd);
 
 void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *fd);
 
+int get_pos(struct activity *act[], unsigned int act_flag);
