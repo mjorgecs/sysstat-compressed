@@ -64,7 +64,6 @@ int main(int argc, char ** argv) {
     long paging_deltas[N_PAGING];
     long io_deltas[N_IO];
     long queue_deltas[N_QUEUE];
-    int nr_cpu = 5;
 
     while (1) {  // Read until EOF
         // Check if we have enough space for a record header
@@ -86,7 +85,7 @@ int main(int argc, char ** argv) {
 
             if (act_id==A_CPU) {
                 // Read CPU stats
-                read_cpu_stats(&cpu[curr], &cpu[prev], &nr_cpu, &m, first_record, cpu_deltas);
+                read_cpu_stats(&cpu[curr], &cpu[prev], 1, &m, first_record, cpu_deltas);
             }
             else if (act_id==A_MEMORY) {
                 // Read Memory stats

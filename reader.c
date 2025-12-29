@@ -121,7 +121,7 @@ int main(int argc, char ** argv) {
 
                 if (fal->id == A_CPU) {
                     // Print CPU stats
-                    print_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini);
+                    print_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini, 1);
                 }
                 
                 if (fal->id == A_MEMORY) {

@@ -4,7 +4,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -I../sysstat-repo/
 
 # Target names and source files
-TARGET = reader
+TARGET = decompressor
 
 TARGET_FILE = target.bin
 
@@ -45,7 +45,7 @@ run: $(TARGET)
 	./$(TARGET) $(FILE) > out4.txt
 
 run-comp:
-	./$(TARGET) $(FILE) $(TARGET_FILE)
+	./$(TARGET) $(FILE) $(TARGET_FILE) > out_compressor.txt
 
 clean:
 	rm -f *.o $(TARGET)

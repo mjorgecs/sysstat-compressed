@@ -1,7 +1,7 @@
 #include "utils.h"
 
 
-void read_cpu_stats(struct stats_cpu **scc, struct stats_cpu **scp, int *nr_cpu,
+void read_cpu_stats(struct stats_cpu **scc, struct stats_cpu **scp, int nr_cpu,
                     void **m, int first_record, long *deltas) {
     
     if (first_record) {
@@ -30,7 +30,7 @@ void read_cpu_stats(struct stats_cpu **scc, struct stats_cpu **scp, int *nr_cpu,
     (*scc)->cpu_guest = (unsigned long long)(deltas[8] + prev->cpu_guest);
     (*scc)->cpu_guest_nice = (unsigned long long)(deltas[9] + prev->cpu_guest_nice);
 
-    print_cpu_stats(*scc, *scp, *nr_cpu);
+    print_cpu_stats(*scc, *scp, nr_cpu, 0);
     
 }
 

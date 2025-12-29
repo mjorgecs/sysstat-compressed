@@ -20,7 +20,7 @@
 #define SP_VALUE(m,n,p)		(((double) ((n) - (m))) / (p) * 100)
 
 
-void print_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu);
+void print_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, int ini);
 
 void print_memory_stats(struct stats_memory *smc);
 
@@ -42,7 +42,7 @@ void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *f
 
 int get_pos(struct activity *act[], unsigned int act_flag);
 
-void read_cpu_stats(struct stats_cpu **scc, struct stats_cpu **scp, int *nr_cpu,
+void read_cpu_stats(struct stats_cpu **scc, struct stats_cpu **scp, int nr_cpu,
                     void **m, int first_record, long *deltas);
 
 void read_memory_stats(struct stats_memory **smc, struct stats_memory **smp, 
