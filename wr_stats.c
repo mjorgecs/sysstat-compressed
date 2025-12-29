@@ -1,10 +1,5 @@
 #include "utils.h"
 
-#define N_QUEUE 6
-#define N_IO 7
-#define N_PAGING 10
-#define N_MEMORY 18
-#define N_CPU 10
 
 void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd, int first_record) {
     

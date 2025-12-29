@@ -1,114 +1,91 @@
 #include "utils.h"
 
 
-void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd) {
+void read_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int *nr_cpu,
+                    void *m, int first_record, long *deltas) {
     
-    #ifdef VERBOSE
-    printf("\n%-12s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n",
-            "CPU", "user", "nice", "system", "idle", "iowait", "steal", "hardirq", "softirq", "guest", "gnice");
-    #endif
-
-    for (int i = 0; i < nr_cpu; i++) {
-        struct stats_cpu *curr = &scc[i];
-        struct stats_cpu *prev = &scp[i];
-
-        long deltas[N_CPU] = {
-            (long)(curr->cpu_user - prev->cpu_user),
-            (long)(curr->cpu_nice - prev->cpu_nice),
-            (long)(curr->cpu_sys - prev->cpu_sys),
-            (long)(curr->cpu_idle - prev->cpu_idle),
-            (long)(curr->cpu_iowait - prev->cpu_iowait),
-            (long)(curr->cpu_steal - prev->cpu_steal),
-            (long)(curr->cpu_hardirq - prev->cpu_hardirq),
-            (long)(curr->cpu_softirq - prev->cpu_softirq),
-            (long)(curr->cpu_guest - prev->cpu_guest),
-            (long)(curr->cpu_guest_nice - prev->cpu_guest_nice)
-        };
-
-        for (int j = 0; j < N_CPU; j++) {
-            fwrite((void *)&deltas[j], sizeof(long), 1, fd);
-        }
-        
-        if (i == 0) {
-            #ifdef VERBOSE
-            // Print CPU name (all for first, then individual CPUs)
-            printf("%-12s", "all-delta");
-            printf("  %5ld  %5ld  %5ld  %5ld   %5ld  %5ld  %5ld   %5ld   %5ld  %5ld\n",
-                    deltas[0], deltas[1], deltas[2], deltas[3], deltas[4], deltas[5], deltas[6], deltas[7], deltas[8], deltas[9]);
-            #endif        
-            /* show only all cpus*/
-            break;
-        } /*else {
-            printf("%-12d", i - 1);
-            printf("  %5.2f  %5.2f  %5.2f  %5.2f   %5.2f  %5.2f  %5.2f   %5.2f   %5.2f  %5.2f\n",
-            pc_user, pc_nice, pc_sys, pc_iowait, pc_steal, 
-            pc_irq, pc_soft, pc_guest, pc_gnice, pc_idle);
-        }*/
+    if (first_record) {
+        *nr_cpu = *(int*)m;
+        m += sizeof(int);
+        // only read the all cpu stats
+        scc = (struct stats_cpu *)malloc(sizeof(struct stats_cpu));
+        scp = (struct stats_cpu *)malloc(sizeof(struct stats_cpu));
+        memcpy(scc, m, sizeof(struct stats_cpu));
+        m += sizeof(struct stats_cpu);
+        return;
     }
+
+    struct stats_cpu *prev = scp;
+    
+    // Read CPU stats (undo deltas)
+    memcpy(deltas, m, sizeof(long) * N_CPU);
+    m += sizeof(long) * N_CPU;
+
+    scc->cpu_user = (unsigned long long)(deltas[0] + prev->cpu_user);
+    scc->cpu_nice = (unsigned long long)(deltas[1] + prev->cpu_nice);
+    scc->cpu_sys = (unsigned long long)(deltas[2] + prev->cpu_sys);
+    scc->cpu_idle = (unsigned long long)(deltas[3] + prev->cpu_idle);
+    scc->cpu_iowait = (unsigned long long)(deltas[4] + prev->cpu_iowait);
+    scc->cpu_steal = (unsigned long long)(deltas[5] + prev->cpu_steal);
+    scc->cpu_hardirq = (unsigned long long)(deltas[6] + prev->cpu_hardirq);
+    scc->cpu_softirq = (unsigned long long)(deltas[7] + prev->cpu_softirq);
+    scc->cpu_guest = (unsigned long long)(deltas[8] + prev->cpu_guest);
+    scc->cpu_guest_nice = (unsigned long long)(deltas[9] + prev->cpu_guest_nice);
+
+    print_cpu_stats(scc, scp, *nr_cpu);
+    
 }
 
-void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE *fd) {
+void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, 
+                        FILE *fd, int first_record, void *m, long *deltas) {
     
     struct stats_memory *curr = smc;
     struct stats_memory *prev = smp;
 
-    long deltas[N_MEMORY] = {
-        (long) (curr->frmkb - prev->frmkb),
-        (long) (curr->availablekb - prev->availablekb),
-        (long) (curr->bufkb - prev->bufkb),
-        (long) (curr->camkb - prev->camkb),
-        (long) (curr->comkb - prev->comkb),
-        (long) (curr->activekb - prev->activekb),
-        (long) (curr->inactkb - prev->inactkb),
-        (long) (curr->dirtykb - prev->dirtykb),
-        (long) (curr->shmemkb - prev->shmemkb),
+    if (first_record) {
+        fwrite((void*)smc, sizeof(struct stats_memory), 1, fd);
+        return;
+    }
 
-        (long) (curr->tlmkb - prev->tlmkb),
-        (long) (curr->caskb - prev->caskb),
-        (long) (curr->anonpgkb - prev->anonpgkb),
-        (long) (curr->slabkb - prev->slabkb),
-        (long) (curr->kstackkb - prev->kstackkb),
-        (long) (curr->pgtblkb - prev->pgtblkb),
-        (long) (curr->vmusedkb - prev->vmusedkb),
+    memcpy(deltas, m, sizeof(long) * N_MEMORY);
+    m += sizeof(long) * N_MEMORY;
 
-        (long) (curr->frskb - prev->frskb),
-        (long) (curr->tlskb - prev->tlskb)
-    };        
+    smc->frmkb = (unsigned long long) (deltas[0] + prev->frmkb);
+    smc->availablekb = (unsigned long long) (deltas[1] + prev->availablekb);
+    smc->bufkb = (unsigned long long) (deltas[2] + prev->bufkb);
+    smc->camkb = (unsigned long long) (deltas[3] + prev->camkb);
+    smc->comkb = (unsigned long long) (deltas[4] + prev->comkb);
+    smc->activekb = (unsigned long long) (deltas[5] + prev->activekb);
+    smc->inactkb = (unsigned long long) (deltas[6] + prev->inactkb);
+    smc->dirtykb = (unsigned long long) (deltas[7] + prev->dirtykb);
+    smc->shmemkb = (unsigned long long) (deltas[8] + prev->shmemkb);
+
+    smc->tlmkb = (unsigned long long) (deltas[9] + prev->tlmkb);
+    smc->caskb = (unsigned long long) (deltas[10] + prev->caskb);
+    smc->anonpgkb = (unsigned long long) (deltas[11] + prev->anonpgkb);
+    smc->slabkb = (unsigned long long) (deltas[12] + prev->slabkb);
+    smc->kstackkb = (unsigned long long) (deltas[13] + prev->kstackkb);
+    smc->pgtblkb = (unsigned long long) (deltas[14] + prev->pgtblkb);
+    smc->vmusedkb = (unsigned long long) (deltas[15] + prev->vmusedkb);
+
+    smc->frskb = (unsigned long long) (deltas[16] + prev->frskb);
+    smc->tlskb = (unsigned long long) (deltas[17] + prev->tlskb);
 
     for (int i = 0; i < N_MEMORY; i++) {
         fwrite((void *)&deltas[i], sizeof(long), 1, fd);
     }
     
-    #ifdef VERBOSE
-    /* Print deltas */
-    printf("\n%-12s  %12s  %12s  %12s  %12s  %12s  %12s  %12s  %12s  %12s\n",
-           "MEMORY", 
-           "kbmemfree", "kbavail", "kbbuffers", "kbcached", "kbcommit", "kbactive", "kbinact", "kbdirty", "kbshmem");
-
-    printf("%-12s  %12ld  %12ld  %12ld  %12ld  %12ld  %12ld  %12ld  %12ld  %12ld\n",
-            "delta", deltas[0], deltas[1], deltas[2], deltas[3], deltas[4], deltas[5], deltas[6], deltas[7], deltas[8]);
-
-    /* Print remaining deltas*/
-    printf("\n%-12s  %12s  %12s  %12s  %12s  %12s  %12s  %12s\n",
-           "MEMORY V2", 
-           "kbmemtotal", "kbcas", "kbanonpg", "kbslab", "kbkstack", "kbpgtbl", "kbvmused");
-
-    printf("%-12s  %12ld  %12ld  %12ld  %12ld  %12ld  %12ld  %12ld\n",
-            "delta", deltas[9], deltas[10], deltas[11], deltas[12], deltas[13], deltas[14], deltas[15]);
-
-    /* Print swap memory deltas */
-    printf("\n%-12s  %12s  %12s\n",
-           "SWAP MEMORY", 
-           "kbswpfree", "kbswptotal");
-
-    printf("%-12s  %12ld  %12ld\n",
-            "delta", deltas[16], deltas[17]);
-    #endif
+    print_memory_stats(smc);
 }
 
-void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE *fd) {
+void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE *fd, int first_record) {
     struct stats_paging *curr = spc;
     struct stats_paging *prev = spp;
+
+    if (first_record) {
+        fwrite((void*)spc, sizeof(struct stats_paging), 1, fd);
+        return;
+    }
 
     long deltas[N_PAGING] = {
         (long) (curr->pgpgin - prev->pgpgin),
@@ -136,9 +113,14 @@ void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE
     #endif
 }
 
-void write_io_stats(struct stats_io *sic, struct stats_io *sip, FILE *fd) {
+void write_io_stats(struct stats_io *sic, struct stats_io *sip, FILE *fd, int first_record) {
     struct stats_io *curr = sic;
     struct stats_io *prev = sip;
+
+    if (first_record) {
+        fwrite((void*)sic, sizeof(struct stats_io), 1, fd);
+        return;
+    }
 
     long deltas[N_IO] = {
         (long) (curr->dk_drive - prev->dk_drive),
@@ -165,10 +147,15 @@ void write_io_stats(struct stats_io *sic, struct stats_io *sip, FILE *fd) {
     #endif
 }
 
-void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *fd) {
+void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *fd, int first_record) {
 
     struct stats_queue *curr = sqc;
     struct stats_queue *prev = sqp;
+
+    if (first_record) {
+        fwrite((void*)sqc, sizeof(struct stats_queue), 1, fd);
+        return;
+    }
 
     long deltas[N_QUEUE] = {
         (long) (curr->nr_running - prev->nr_running),
