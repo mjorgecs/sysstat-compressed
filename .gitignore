@@ -59,3 +59,6 @@ dkms.conf
 
 # binary files
 *.bin
+
+# output files
+*.txt

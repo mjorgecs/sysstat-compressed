@@ -19,32 +19,39 @@ struct record_header *record_hdr[2];
 
 
 int main(int argc, char ** argv) {
-    if(argc < 2) {
-        fprintf(stderr, "Usage: %s <sa file>\n", argv[0]);
+    if(argc < 3) {
+        fprintf(stderr, "Usage: %s <sa file> <output file>\n", argv[0]);
         exit(EXIT_FAILURE);
     }
 
-    struct stat sbuf;
 	char * path = argv[1];
+    char * target = argv[2];
+    
+    struct stat sbuf;
 	int fd = open(path, O_RDONLY);
 	fstat(fd, &sbuf);
 	off_t len = sbuf.st_size;
     void * m_start = (void *) mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
     void * m = m_start;
     
-    // Read file_magic
-    struct file_magic *magic = (struct file_magic *)m;
+    FILE * target_file = fopen(target, "w");
+
+    // Write file_magic
+    fwrite(m, FILE_MAGIC_SIZE, 1, target_file);
     m += FILE_MAGIC_SIZE;
 
-    // Read file_header
+    // Write file_header
     struct file_header *hdr = (struct file_header *)m;
+    #ifdef VERBOSE
     printf("Linux %s (%s) \t%02u/%02u/%d \t_x86_64_\t(%d CPU)\n\n",
            hdr->sa_release, hdr->sa_nodename,
            hdr->sa_month, hdr->sa_day, hdr->sa_year + 1900,
            hdr->sa_cpu_nr > 1 ? hdr->sa_cpu_nr - 1 : 1);
+    #endif
+    fwrite(m, FILE_HEADER_SIZE, 1, target_file);
     m += FILE_HEADER_SIZE;
     
-    // Read file_activity list
+    // Read and write file_activity list
     int p, i, j, k;
     struct file_activity *fal = ((struct file_activity *)m);
     struct file_activity *file_actlst[hdr->sa_act_nr]; 
@@ -75,8 +82,8 @@ int main(int argc, char ** argv) {
 
     // Read records
     int curr = 1, prev = 0;
-    int first_record = 1;
     int records_read = 0;
+    int first_record = 1;
     
     while (1) {  // Read until EOF
         // Check if we have enough space for a record header
@@ -85,11 +92,12 @@ int main(int argc, char ** argv) {
         }
 
         record_hdr[curr] = ((struct record_header *) m);
+        fwrite(m, RECORD_HEADER_SIZE, 1, target_file);
         m += RECORD_HEADER_SIZE;
         
-        if (!first_record) {
-            printf("\nTIME: %02u:%02u:%02u-------", record_hdr[curr]->hour, record_hdr[curr]->minute, record_hdr[curr]->second);
-        }
+        #ifdef VERBOSE
+        printf("\nTIME: %02u:%02u:%02u-------", record_hdr[curr]->hour, record_hdr[curr]->minute, record_hdr[curr]->second);
+        #endif
 
         // Read statistics for each activity
         __nr_t nr_value;
@@ -115,42 +123,41 @@ int main(int argc, char ** argv) {
                 m += data_size;
             }
 
-            if (!first_record) {
+            fwrite((void *)&fal->id, sizeof(unsigned int), 1, target_file);
 
-                unsigned long long itv = record_hdr[curr]->uptime_cs - record_hdr[prev]->uptime_cs;
+            if (fal->id == A_CPU) {
+                // Print CPU stats
+                write_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], 
+                                act[p]->nr_ini, target_file, first_record);
+            }
+            
+            else if (fal->id == A_MEMORY) {
+                // Print Memory stats
+                write_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev], 
+                                    target_file, first_record);
+            }
 
-                if (fal->id == A_CPU) {
-                    // Print CPU stats
-                    print_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini);
-                }
-                
-                if (fal->id == A_MEMORY) {
-                    // Print Memory stats
-                    print_memory_stats((struct stats_memory *)act[p]->buf[curr]);
-                }
+            else if (fal->id == A_PAGE) {
+                // Print Paging stats
+                write_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], 
+                                    target_file, first_record);
+            }
 
-                else if (fal->id == A_PAGE) {
-                    // Print Paging stats
-                    print_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], itv);
-                }
+            else if (fal->id == A_IO) {
+                // Print I/O stats
+                write_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], target_file, first_record);
+            }
 
-                else if (fal->id == A_IO) {
-                    // Print I/O stats
-                    print_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], itv);
-                }
-
-                else if (fal->id == A_QUEUE) {
-                    // Print Queue stats
-                    print_queue_stats((struct stats_queue *)act[p]->buf[curr]);
-                }
-            }            
+            else if (fal->id == A_QUEUE) {
+                // Print Queue stats
+                write_queue_stats((struct stats_queue *)act[p]->buf[curr], (struct stats_queue *)act[p]->buf[prev], target_file, first_record);
+            }
         }
 
         // Swap buffers
         int tmp = prev;
         prev = curr;
         curr = tmp;
-
         first_record = 0;
         records_read++;
     }
@@ -170,6 +177,7 @@ int main(int argc, char ** argv) {
 
     munmap(m_start, len);
     close(fd);
+    fclose(target_file);
     
     return 0;
 }

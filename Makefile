@@ -6,9 +6,11 @@ CFLAGS = -Wall -Wextra -std=c99 -I../sysstat-repo/
 # Target names and source files
 TARGET = reader
 
-SRC_FILES = $(TARGET).c pr_stats.c ../sysstat-repo/activity.c
+TARGET_FILE = target.bin
 
-FILE = file1.bin
+SRC_FILES = $(TARGET).c wr_stats.c rd_stats.c helper.c pr_stats.c ../sysstat-repo/activity.c
+
+FILE = file2.bin
 
 OBJS = $(SRC_FILES:.c=.o)
 
@@ -40,7 +42,10 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 run: $(TARGET)
-	./$(TARGET) $(FILE)
+	./$(TARGET) $(FILE) > out4.txt
+
+run-comp:
+	./$(TARGET) $(FILE) $(TARGET_FILE)
 
 clean:
 	rm -f *.o $(TARGET)
