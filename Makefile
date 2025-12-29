@@ -4,13 +4,13 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -I../sysstat-repo/
 
 # Target names and source files
-TARGET = decompressor
+TARGET = reader
 
 TARGET_FILE = target.bin
 
 SRC_FILES = $(TARGET).c wr_stats.c rd_stats.c helper.c pr_stats.c ../sysstat-repo/activity.c
 
-FILE = file1.bin
+FILE = file2.bin
 
 OBJS = $(SRC_FILES:.c=.o)
 
@@ -42,7 +42,7 @@ $(TARGET): $(OBJS)
 	$(CC) $(CFLAGS) -o $@ $^
 
 run: $(TARGET)
-	./$(TARGET) $(FILE)
+	./$(TARGET) $(FILE) > out4.txt
 
 run-comp:
 	./$(TARGET) $(FILE) $(TARGET_FILE)
