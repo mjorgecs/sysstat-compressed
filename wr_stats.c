@@ -14,8 +14,9 @@ void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, F
         
         if (first_record) {
             // only write the all cpu stats
+            printf("cpu_n: %d cpu_size: %zu\n", i, sizeof(struct stats_cpu));
             fwrite((void*) curr, sizeof(struct stats_cpu), 1, fd);
-            return;
+            continue;
         }
         
         long deltas[N_CPU] = {
@@ -34,7 +35,7 @@ void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, F
         for (int j = 0; j < N_CPU; j++) {
             fwrite((void *)&deltas[j], sizeof(long), 1, fd);
         }
-        
+        /*
         if (i == 0) {
             #ifdef VERBOSE
             // Print CPU name (all for first, then individual CPUs)
@@ -42,7 +43,7 @@ void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, F
             printf("  %5ld  %5ld  %5ld  %5ld   %5ld  %5ld  %5ld   %5ld   %5ld  %5ld\n",
                     deltas[0], deltas[1], deltas[2], deltas[3], deltas[4], deltas[5], deltas[6], deltas[7], deltas[8], deltas[9]);
             #endif        
-            /* show only all cpus*/
+            /* show only all cpus
             break;
         } /*else {
             printf("%-12d", i - 1);

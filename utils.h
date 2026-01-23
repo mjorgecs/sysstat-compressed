@@ -42,8 +42,8 @@ void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *f
 
 int get_pos(struct activity *act[], unsigned int act_flag);
 
-void read_cpu_stats(struct stats_cpu **scc, struct stats_cpu **scp, int *nr_cpu,
-                    void **m, int first_record, long *deltas);
+void read_cpu_stats(struct stats_cpu ***scc, struct stats_cpu ***scp, int nr_cpu,
+                    void **m, int first_record, long *deltas, FILE *target_file);
 
 void read_memory_stats(struct stats_memory **smc, struct stats_memory **smp, 
                         FILE *fd, int first_record, void **m, long *deltas);

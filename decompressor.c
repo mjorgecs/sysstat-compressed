@@ -55,10 +55,17 @@ int main(int argc, char ** argv) {
     struct file_activity *fal = ((struct file_activity *)m);
     struct file_activity *file_actlst[hdr->sa_act_nr]; 
 
+
+    int nr_cpu;
+
     for (i = 0; i < (int)hdr->sa_act_nr; i++, fal++, m += FILE_ACTIVITY_SIZE) {
         fwrite(m, FILE_ACTIVITY_SIZE, 1, target_file);
         file_actlst[i] = fal;
-        
+
+        // get the number of CPUs
+        if (fal->id == A_CPU) {
+            nr_cpu = fal->nr;
+        }
         /*
         if ((p = get_pos(act, fal->id)) < 0)
 			continue;
@@ -87,7 +94,16 @@ int main(int argc, char ** argv) {
     int records_read = 0;
     int first_record = 1;
     
-    struct stats_cpu *cpu[2];
+    struct stats_cpu **cpu[2];
+    // alllocate mamory for CPUs
+    cpu[0] = (struct stats_cpu **)malloc(sizeof(struct stats_cpu *) * nr_cpu);
+    cpu[1] = (struct stats_cpu **)malloc(sizeof(struct stats_cpu *) * nr_cpu);
+
+    for (i = 0; i < nr_cpu; i++) {
+        cpu[0][i] = (struct stats_cpu *)malloc(sizeof(struct stats_cpu));
+        cpu[1][i] = (struct stats_cpu *)malloc(sizeof(struct stats_cpu));
+    }
+
     struct stats_memory *memory[2];
     struct stats_paging *paging[2];
     struct stats_io *io[2];
@@ -98,7 +114,7 @@ int main(int argc, char ** argv) {
     long paging_deltas[N_PAGING];
     long io_deltas[N_IO];
     long queue_deltas[N_QUEUE];
-    int nr_cpu = 5;
+    
 
     unsigned long long itv = 100;
 
@@ -142,12 +158,11 @@ int main(int argc, char ** argv) {
             }
             */
 
-            /*if (fal->id==A_CPU) {
+            if (fal->id==A_CPU) {
                 // Read CPU stats
-                read_cpu_stats(&cpu[curr], &cpu[prev], &nr_cpu, &m, first_record, cpu_deltas);
-                fwrite((void *)cpu[curr], sizeof(struct stats_cpu), 1, target_file);
-            }*/
-            if (fal->id==A_MEMORY) {
+                read_cpu_stats(&cpu[curr], &cpu[prev], nr_cpu, &m, first_record, cpu_deltas, target_file);
+            }
+            else if (fal->id==A_MEMORY) {
                 // Read Memory stats
                 read_memory_stats(&memory[curr], &memory[prev], target_file, first_record, &m, memory_deltas);
                 fwrite((void *)memory[curr], sizeof(struct stats_memory), 1, target_file);
