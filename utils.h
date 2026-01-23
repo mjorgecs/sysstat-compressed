@@ -1,4 +1,6 @@
 #include <string.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "../sysstat-repo/sa.h"
 #include "../sysstat-repo/rd_stats.h"
 
