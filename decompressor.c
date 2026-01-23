@@ -1,18 +1,11 @@
-// Manual calculation version - demonstrates how to calculate CPU percentages
-// compile : gcc -Wall -Wextra -std=c99 -I ../sysstat-repo/ ../sysstat-repo/activity.c read_file_manual.c -o read_file_manual -lm
-
 #include <stdio.h>
-#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <string.h>
 
 #include "utils.h"
-#include "../sysstat-repo/sa.h"
-#include "../sysstat-repo/rd_stats.h"
-#include "../sysstat-repo/version.h"
+
 
 struct record_header *record_hdr[2];
 
@@ -22,24 +15,27 @@ int main(int argc, char ** argv) {
         exit(EXIT_FAILURE);
     }*/
 
-	char * path = "target.bin";
-    char * target = "file_decompressed.bin";
+	char *path = "target.bin";
+    char *target = "file_decompressed.bin";
     
     struct stat sbuf;
 	int fd = open(path, O_RDONLY);
 	fstat(fd, &sbuf);
 	off_t len = sbuf.st_size;
-    void * m_start = (void *) mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
-    void * m = m_start;
+    void *m_start = (void *) mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
+    void *m = m_start;
     
     FILE * target_file = fopen(target, "w");
 
-    // Write file_magic
+    // Write file magic
     fwrite(m, FILE_MAGIC_SIZE, 1, target_file);
     m += FILE_MAGIC_SIZE;
 
-    // Write file_header
+    // Write file header
     struct file_header *hdr = (struct file_header *)m;
+    fwrite(m, FILE_HEADER_SIZE, 1, target_file);
+    m += FILE_HEADER_SIZE;
+
     #ifdef VERBOSE
     printf("Linux %s (%s) \t%02u/%02u/%d \t_x86_64_\t(%d CPU)\n\n",
            hdr->sa_release, hdr->sa_nodename,
@@ -47,10 +43,7 @@ int main(int argc, char ** argv) {
            hdr->sa_cpu_nr > 1 ? hdr->sa_cpu_nr - 1 : 1);
     printf("\nnr_act: %u", hdr->sa_act_nr);
     #endif
-    fwrite(m, FILE_HEADER_SIZE, 1, target_file);
-    m += FILE_HEADER_SIZE;
 
-    printf("\nTotal activities in compressed file: %u\n", hdr->sa_act_nr);
     
     // Read and write file_activity list
     int p, i, j, k;
