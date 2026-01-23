@@ -16,7 +16,7 @@ void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, F
         if (first_record) {
             fwrite((void*) curr, sizeof(struct stats_cpu), 1, fd);
             #ifdef VERBOSE
-            printf("%5llu  %5llu  %5llu  %5llu   %5llu  %5llu  %5llu   %5llu   %5llu  %5llu",
+            printf("%5llu  %5llu  %5llu  %5llu   %5llu  %5llu  %5llu   %5llu   %5llu  %5llu\n",
                     curr->cpu_user, curr->cpu_nice, curr->cpu_sys, curr->cpu_idle, curr->cpu_iowait, curr->cpu_steal, 
                     curr->cpu_hardirq, curr->cpu_softirq, curr->cpu_guest, curr->cpu_guest_nice);
             #endif
@@ -54,7 +54,7 @@ void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE
     struct stats_memory *prev = smp;
 
     #ifdef VERBOSE
-    printf("\n%-12s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n",
+    printf("\n%-12s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s  %9s\n",
            "MEMORY", "frmkb", "availablekb", "bufkb", "camkb", "comkb", "activekb", "inactkb", "dirtykb", "shmemkb",
            "tlmkb", "caskb", "anonpgkb", "slabkb", "kstackkb", "pgtblkb", "vmusedkb", "frskb", "tlskb");
     printf("%-12s  ", "");
@@ -62,7 +62,7 @@ void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE
     if (first_record) {
         fwrite((void*)smc, sizeof(struct stats_memory), 1, fd);
         #ifdef VERBOSE
-        printf("%5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu  %5llu",
+        printf("%9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu\n",
             curr->frmkb, curr->availablekb, curr->bufkb, curr->camkb, curr->comkb, curr->activekb, curr->inactkb, curr->dirtykb, curr->shmemkb,
             curr->tlmkb, curr->caskb, curr->anonpgkb, curr->slabkb, curr->kstackkb, curr->pgtblkb, curr->vmusedkb,
             curr->frskb, curr->tlskb);
@@ -96,7 +96,7 @@ void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE
     for (int i = 0; i < N_MEMORY; i++) {
         fwrite((void *)&deltas[i], sizeof(long), 1, fd);
         #ifdef VERBOSE
-        printf("%5ld  ", deltas[i]);
+        printf("%9ld  ", deltas[i]);
         #endif
     }
     #ifdef VERBOSE
@@ -118,7 +118,7 @@ void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE
     if (first_record) {
         fwrite((void*)spc, sizeof(struct stats_paging), 1, fd);
         #ifdef VERBOSE
-        printf("%9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu",
+        printf("%9lu  %9lu  %9lu  %9lu  %9lu  %9lu  %9lu  %9lu  %9lu  %9lu\n",
             curr->pgpgin, curr->pgpgout, curr->pgfault, curr->pgmajfault, curr->pgfree,
             curr->pgscan_kswapd, curr->pgscan_direct, curr->pgsteal, curr->pgpromote, curr->pgdemote);
         #endif
@@ -141,7 +141,7 @@ void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE
     for (int i = 0; i < N_PAGING; i++) {
         fwrite((void *)&deltas[i], sizeof(long), 1, fd);
         #ifdef VERBOSE
-        printf("%9ld  ", deltas[i]);
+        printf("%9ld   ", deltas[i]);
         #endif
     }
     #ifdef VERBOSE
@@ -163,7 +163,7 @@ void write_io_stats(struct stats_io *sic, struct stats_io *sip, FILE *fd, int fi
     if (first_record) {
         fwrite((void*)sic, sizeof(struct stats_io), 1, fd);
         #ifdef VERBOSE
-        printf("%9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu",
+        printf("%9llu  %9llu  %9llu  %9llu  %9llu  %9llu  %9llu\n",
             curr->dk_drive, curr->dk_drive_rio, curr->dk_drive_wio, curr->dk_drive_dio,
             curr->dk_drive_rblk, curr->dk_drive_wblk, curr->dk_drive_dblk);
         #endif
@@ -198,11 +198,17 @@ void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *f
 
     #ifdef VERBOSE
     printf("\n%-12s  %12s  %12s  %12s  %12s  %12s  %12s\n",
-            "QUEUE", "nr_running", "nr_threads", "load_avg_1", "load_avg_5", "load_avg_15", "blocked");    
+            "QUEUE", "nr_running", "nr_threads", "load_avg_1", "load_avg_5", "load_avg_15", "procs_blocked");
+    printf("%-12s  ", ""); 
     #endif
     
     if (first_record) {
         fwrite((void*)sqc, sizeof(struct stats_queue), 1, fd);
+        #ifdef VERBOSE
+        printf("%12llu  %12llu  %12u  %12u  %12u  %12llu\n",
+            curr->nr_running, curr->nr_threads, curr->load_avg_1, curr->load_avg_5,
+            curr->load_avg_15, curr->procs_blocked);
+        #endif
         return;
     }
 
@@ -217,11 +223,12 @@ void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *f
 
     for (int i = 0; i < N_QUEUE; i++) {
         fwrite((void *)&deltas[i], sizeof(long), 1, fd);
+        #ifdef VERBOSE
+        printf("%12ld  ", deltas[i]);
+        #endif
     }
-    
-    
-    printf("%-12s  %12ld  %12ld  %12ld  %12ld  %12ld  %12ld\n",
-        "delta", deltas[0], deltas[1], deltas[2], deltas[3], deltas[4], deltas[5]);
+    #ifdef VERBOSE
+    printf("\n");
     #endif
 }
 

@@ -49,6 +49,8 @@ int main(int argc, char ** argv) {
     #endif
     fwrite(m, FILE_HEADER_SIZE, 1, target_file);
     m += FILE_HEADER_SIZE;
+
+    printf("\nTotal activities in compressed file: %u\n", hdr->sa_act_nr);
     
     // Read and write file_activity list
     int p, i, j, k;

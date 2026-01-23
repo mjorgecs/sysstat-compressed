@@ -58,3 +58,10 @@ void read_io_stats(struct stats_io **sic, struct stats_io **sip, FILE *fd,
 
 void read_queue_stats(struct stats_queue **sqc, struct stats_queue **sqp, FILE *fd, int first_record,
                     void **m, long *deltas);
+
+void set_activity_flags(int argc, int nr_act, char **argv, int **act_flags);
+
+void usage(char * prog_name);
+
+int is_selected(int act_id, int *act_flags, int nr_act);
+//void compress_stats(struct activity ***act, int curr, int prev, unsigned int act_id, FILE *target_file, int first_record, int p);

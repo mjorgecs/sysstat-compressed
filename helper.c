@@ -2,12 +2,12 @@
 
 void usage(char * prog_name) {
     fprintf(stderr, "Usage: %s <sar file> <output file> <activities>\n", prog_name);
-    fprintf(stderr, _("Activities are:\n"
-                    "  A_CPU       CPU usage statistics\n"
-                    "  A_MEMORY    Memory usage statistics\n"
-                    "  A_PAGE      Paging statistics\n"
-                    "  A_IO        I/O statistics\n"
-                    "  A_QUEUE     Queue statistics\n"));
+    fprintf(stderr, "Activities are:\n"
+                      "  A_CPU       CPU usage statistics\n"
+                      "  A_MEMORY    Memory usage statistics\n"
+                      "  A_PAGE      Paging statistics\n"
+                      "  A_IO        I/O statistics\n"
+                      "  A_QUEUE     Queue statistics\n");
     fprintf(stderr, "If no activities are given, all default activities are processed.\n");
     exit(EXIT_FAILURE);
 }
@@ -60,24 +60,25 @@ int get_pos(struct activity *act[], unsigned int act_flag) {
 	return -1;
 }
 
-compress_stats(struct activity *act, int curr, int prev, unsigned int act_id, FILE *target_file, int first_record) {
+/*
+void compress_stats(struct activity ***act, int curr, int prev, unsigned int act_id, FILE *target_file, int first_record, int p) {
 	switch (act_id) {
 	case A_CPU:
-		write_cpu_stats((struct stats_cpu *)act->buf[curr], (struct stats_cpu *)act->buf[prev], act->nr_ini, target_file, first_record);
+		write_cpu_stats((struct stats_cpu *)((*act)[p])->buf[curr], (struct stats_cpu *)(*act)[p]->buf[prev], (*act)[p]->nr_ini, target_file, first_record);
 		break;
 	case A_MEMORY:
-		write_memory_stats((struct stats_memory *)act->buf[curr], (struct stats_memory *)act->buf[prev], target_file, first_record);
+		write_memory_stats((struct stats_memory *)(*act)[p]->buf[curr], (struct stats_memory *)(*act)[p]->buf[prev], target_file, first_record);
 		break;
 	case A_PAGE:
-		write_paging_stats((struct stats_paging *)act->buf[curr], (struct stats_paging *)act->buf[prev], target_file, first_record);
+		write_paging_stats((struct stats_paging *)(*act)[p]->buf[curr], (struct stats_paging *)(*act)[p]->buf[prev], target_file, first_record);
 		break;
 	case A_IO:
-		write_io_stats((struct stats_io *)act->buf[curr], (struct stats_io *)act->buf[prev], target_file, first_record);
+		write_io_stats((struct stats_io *)(*act)[p]->buf[curr], (struct stats_io *)(*act)[p]->buf[prev], target_file, first_record);
 		break;
 	case A_QUEUE:
-		write_queue_stats((struct stats_queue *)act->buf[curr], (struct stats_queue *)act->buf[prev], target_file, first_record);
+		write_queue_stats((struct stats_queue *)(*act)[p]->buf[curr], (struct stats_queue *)(*act)[p]->buf[prev], target_file, first_record);
 		break;
 	default:
 		break;
 	}
-}
+}*/

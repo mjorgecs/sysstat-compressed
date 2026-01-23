@@ -62,7 +62,7 @@ int main(int argc, char **argv) {
     unsigned int total_act = hdr.sa_act_nr;
     
     // Update number of activities in header and write it onto target file
-    hdr.sa_act_nr = new_act;
+    hdr.sa_act_nr = (unsigned int)new_act;
     fwrite((void *)&hdr, FILE_HEADER_SIZE, 1, target_file);
     
     // Read and write file activity list
@@ -111,7 +111,7 @@ int main(int argc, char **argv) {
         #endif
 
         // Read statistics for each activity
-        for (i = 0; i < (int)new_act; i++) {
+        for (i = 0; i < (int)total_act; i++) {
             fal = file_act_lst[i];
             
             if (fal->has_nr) {
@@ -136,7 +136,25 @@ int main(int argc, char **argv) {
             } else {
                 continue;
             }
-            compress_stats((struct activity *)act[p], curr, prev, fal->id, target_file, first_record);
+            switch (fal->id) {
+                case A_CPU:
+                    write_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini, target_file, first_record);
+                    break;
+                case A_MEMORY:
+                    write_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev], target_file, first_record);
+                    break;
+                case A_PAGE:
+                    write_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], target_file, first_record);
+                    break;
+                case A_IO:
+                    write_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], target_file, first_record);
+                    break;
+                case A_QUEUE:
+                    write_queue_stats((struct stats_queue *)act[p]->buf[curr], (struct stats_queue *)act[p]->buf[prev], target_file, first_record);
+                    break;
+                default:
+                    break;
+            }
         }
 
         // Swap buffers
