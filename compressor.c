@@ -44,6 +44,7 @@ int main(int argc, char ** argv) {
     // Write file_header
     struct file_header hdr;
     memcpy((void *)&hdr, m, FILE_HEADER_SIZE);
+
     m += FILE_HEADER_SIZE;
     
     #ifdef VERBOSE
@@ -54,6 +55,7 @@ int main(int argc, char ** argv) {
     #endif
     
     unsigned int act_nr = hdr.sa_act_nr;
+    printf("act_nr: %u\n", act_nr);
         
     // 4 acts for now: MEMORY, PAGE, IO, QUEUE
     hdr.sa_act_nr = 4;
@@ -68,13 +70,9 @@ int main(int argc, char ** argv) {
         file_actlst[i] = fal;
         
         // select only activities to be processed
-        if (((p = get_pos(act, fal->id)) < 0) || 
-        ((fal->id != A_MEMORY) && (fal->id != A_PAGE) &&
-        (fal->id != A_IO) && (fal->id != A_QUEUE))) {
+        if ((p = get_pos(act, fal->id)) < 0)
             continue;
-        }
         
-        fwrite(m, FILE_ACTIVITY_SIZE, 1, target_file);
         // Set activity attributes
         for (k = 0; k < 3; k++) {
 			act[p]->ftypes_nr[k] = fal->types_nr[k];
@@ -90,6 +88,14 @@ int main(int argc, char ** argv) {
         act[p]->buf[0] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
         act[p]->buf[1] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
         act[p]->nr_allocated = fal->nr;
+
+        if ((fal->id==A_MEMORY) || (fal->id==A_PAGE) ||
+            (fal->id==A_IO) || (fal->id==A_QUEUE)) {
+            // write file activity
+            printf("Activity id: %u\n", fal->id);
+            fwrite(m, FILE_ACTIVITY_SIZE, 1, target_file);                 
+        }
+
     }
 
 
@@ -98,6 +104,7 @@ int main(int argc, char ** argv) {
     int records_read = 0;
     int first_record = 1;
     size_t data_size;
+    __nr_t nr_value;
     
     while (1) {  // Read until EOF
         // Check if we have enough space for a record header
@@ -114,20 +121,18 @@ int main(int argc, char ** argv) {
         #endif
 
         // Read statistics for each activity
-        __nr_t nr_value;
         for (i = 0; i < (int)act_nr; i++) {
             fal = file_actlst[i];
             
             if (fal->has_nr) {
-                nr_value = *((__nr_t *) m);
+                memcpy((void *)&nr_value, m, sizeof(__nr_t));
                 m += sizeof(__nr_t);
             }
             else {
                 nr_value = fal->nr;
             }
 
-            p = get_pos(act, fal->id);
-            if (nr_value > 0 && p >= 0) {
+            if ((nr_value > 0) && ((p=get_pos(act, fal->id)) >= 0)) {
                 data_size = (size_t) act[p]->fsize * (size_t) nr_value * (size_t) act[p]->nr2;
                 
                 if ((fal->id==A_MEMORY) || (fal->id==A_PAGE) ||
@@ -139,6 +144,8 @@ int main(int argc, char ** argv) {
                 }
                 
                 m += data_size;
+            } else {
+                continue;
             }
 
             /*

@@ -4,7 +4,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -I../sysstat-repo/
 
 # Target names and source files
-TARGET = compressor
+TARGET = decompressor
 
 TARGET_FILE = target.bin
 
