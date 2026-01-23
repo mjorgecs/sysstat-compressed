@@ -1,6 +1,5 @@
 #include "utils.h"
 
-
 void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd, int first_record) {
     
     for (int i = 0; i < nr_cpu; i++) {

@@ -1,6 +1,5 @@
 #include "utils.h"
 
-
 void read_cpu_stats(struct stats_cpu ***scc, struct stats_cpu ***scp, int nr_cpu,
                     void **m, int first_record, long *deltas, FILE *target_file) {
     

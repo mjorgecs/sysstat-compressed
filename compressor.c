@@ -1,23 +1,13 @@
-// Manual calculation version - demonstrates how to calculate CPU percentages
-// compile : gcc -Wall -Wextra -std=c99 -I ../sysstat-repo/ ../sysstat-repo/activity.c read_file_manual.c -o read_file_manual -lm
-
 #include <stdio.h>
-#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <string.h>
 
 #include "utils.h"
-#include "../sysstat-repo/sa.h"
-#include "../sysstat-repo/rd_stats.h"
-#include "../sysstat-repo/version.h"
 
 extern struct activity *act[];
 struct record_header *record_hdr[2];
-
-
 
 
 int main(int argc, char **argv) {
@@ -128,32 +118,14 @@ int main(int argc, char **argv) {
                 if (is_selected(fal->id, act_flags, new_act)) {
                     if (fal->has_nr) fwrite((void *)&nr_value, sizeof(__nr_t), 1, target_file);
                     memcpy(act[p]->buf[curr], m, data_size);
-                    act[p]->nr[curr] = nr_value;                    
+                    act[p]->nr[curr] = nr_value;
+                    m += data_size;
+
+                    compress_stats(act[p], curr, prev, fal->id, target_file, first_record);
+                    continue;
                 }
-
+                
                 m += data_size;
-
-            } else {
-                continue;
-            }
-            switch (fal->id) {
-                case A_CPU:
-                    write_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], act[p]->nr_ini, target_file, first_record);
-                    break;
-                case A_MEMORY:
-                    write_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev], target_file, first_record);
-                    break;
-                case A_PAGE:
-                    write_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], target_file, first_record);
-                    break;
-                case A_IO:
-                    write_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], target_file, first_record);
-                    break;
-                case A_QUEUE:
-                    write_queue_stats((struct stats_queue *)act[p]->buf[curr], (struct stats_queue *)act[p]->buf[prev], target_file, first_record);
-                    break;
-                default:
-                    break;
             }
         }
 
