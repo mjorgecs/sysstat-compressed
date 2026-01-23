@@ -19,13 +19,14 @@ struct record_header *record_hdr[2];
 
 
 int main(int argc, char ** argv) {
+    /*
     if(argc < 3) {
         fprintf(stderr, "Usage: %s <sa file> <output file>\n", argv[0]);
         exit(EXIT_FAILURE);
-    }
+    }*/
 
-	char * path = argv[1];
-    char * target = argv[2];
+	char * path = "file1.bin";
+    char * target = "target.bin";
     
     struct stat sbuf;
 	int fd = open(path, O_RDONLY);
@@ -39,29 +40,41 @@ int main(int argc, char ** argv) {
     // Write file_magic
     fwrite(m, FILE_MAGIC_SIZE, 1, target_file);
     m += FILE_MAGIC_SIZE;
-
+    
     // Write file_header
-    struct file_header *hdr = (struct file_header *)m;
+    struct file_header hdr;
+    memcpy((void *)&hdr, m, FILE_HEADER_SIZE);
+    m += FILE_HEADER_SIZE;
+    
     #ifdef VERBOSE
     printf("Linux %s (%s) \t%02u/%02u/%d \t_x86_64_\t(%d CPU)\n\n",
-           hdr->sa_release, hdr->sa_nodename,
-           hdr->sa_month, hdr->sa_day, hdr->sa_year + 1900,
-           hdr->sa_cpu_nr > 1 ? hdr->sa_cpu_nr - 1 : 1);
+    hdr.sa_release, hdr.sa_nodename,
+    hdr.sa_month, hdr.sa_day, hdr.sa_year + 1900,
+    hdr.sa_cpu_nr > 1 ? hdr.sa_cpu_nr - 1 : 1);
     #endif
-    fwrite(m, FILE_HEADER_SIZE, 1, target_file);
-    m += FILE_HEADER_SIZE;
+    
+    unsigned int act_nr = hdr.sa_act_nr;
+        
+    // 4 acts for now: MEMORY, PAGE, IO, QUEUE
+    hdr.sa_act_nr = 4;
+    fwrite((void *)&hdr, FILE_HEADER_SIZE, 1, target_file);
     
     // Read and write file_activity list
     int p, i, j, k;
     struct file_activity *fal = ((struct file_activity *)m);
-    struct file_activity *file_actlst[hdr->sa_act_nr]; 
+    struct file_activity *file_actlst[act_nr]; 
 
-    for (i = 0; i < (int)hdr->sa_act_nr; i++, fal++, m += FILE_ACTIVITY_SIZE) {
+    for (i = 0; i < (int)act_nr; i++, fal++, m += FILE_ACTIVITY_SIZE) {
         file_actlst[i] = fal;
         
-        if ((p = get_pos(act, fal->id)) < 0)
-			continue;
-
+        // select only activities to be processed
+        if (((p = get_pos(act, fal->id)) < 0) || 
+        ((fal->id != A_MEMORY) && (fal->id != A_PAGE) &&
+        (fal->id != A_IO) && (fal->id != A_QUEUE))) {
+            continue;
+        }
+        
+        fwrite(m, FILE_ACTIVITY_SIZE, 1, target_file);
         // Set activity attributes
         for (k = 0; k < 3; k++) {
 			act[p]->ftypes_nr[k] = fal->types_nr[k];
@@ -84,6 +97,7 @@ int main(int argc, char ** argv) {
     int curr = 1, prev = 0;
     int records_read = 0;
     int first_record = 1;
+    size_t data_size;
     
     while (1) {  // Read until EOF
         // Check if we have enough space for a record header
@@ -101,7 +115,7 @@ int main(int argc, char ** argv) {
 
         // Read statistics for each activity
         __nr_t nr_value;
-        for (i = 0; i < (int)hdr->sa_act_nr; i++) {
+        for (i = 0; i < (int)act_nr; i++) {
             fal = file_actlst[i];
             
             if (fal->has_nr) {
@@ -114,43 +128,50 @@ int main(int argc, char ** argv) {
 
             p = get_pos(act, fal->id);
             if (nr_value > 0 && p >= 0) {
-                size_t data_size = (size_t) act[p]->fsize * (size_t) nr_value * (size_t) act[p]->nr2;
+                data_size = (size_t) act[p]->fsize * (size_t) nr_value * (size_t) act[p]->nr2;
                 
-                // Copy data
-                memcpy(act[p]->buf[curr], m, data_size);
-                act[p]->nr[curr] = nr_value;
+                if ((fal->id==A_MEMORY) || (fal->id==A_PAGE) ||
+                    (fal->id==A_IO) || (fal->id==A_QUEUE)) {
+                    // Copy data
+                    if (fal->has_nr) fwrite((void *)&nr_value, sizeof(__nr_t), 1, target_file);
+                    memcpy(act[p]->buf[curr], m, data_size);
+                    act[p]->nr[curr] = nr_value;                    
+                }
                 
                 m += data_size;
             }
 
-            fwrite((void *)&fal->id, sizeof(unsigned int), 1, target_file);
-
+            /*
             if (fal->id == A_CPU) {
                 // Print CPU stats
                 write_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], 
                                 act[p]->nr_ini, target_file, first_record);
-            }
+            }*/
             
-            else if (fal->id == A_MEMORY) {
+            if (fal->id == A_MEMORY) {
                 // Print Memory stats
                 write_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev], 
                                     target_file, first_record);
+                printf("data_size_memory: %zu\n", data_size);
             }
 
             else if (fal->id == A_PAGE) {
                 // Print Paging stats
                 write_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], 
                                     target_file, first_record);
+                printf("data_size_paging: %zu\n", data_size);
             }
 
             else if (fal->id == A_IO) {
                 // Print I/O stats
                 write_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], target_file, first_record);
+                printf("data_size_io: %zu\n", data_size);
             }
 
             else if (fal->id == A_QUEUE) {
                 // Print Queue stats
                 write_queue_stats((struct stats_queue *)act[p]->buf[curr], (struct stats_queue *)act[p]->buf[prev], target_file, first_record);
+                printf("data_size_queue: %zu\n", data_size);
             }
         }
 

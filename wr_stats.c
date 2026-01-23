@@ -5,29 +5,30 @@ void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, F
         
     #ifdef VERBOSE
     printf("\n%-12s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s  %5s\n",
-        "CPU", "user", "nice", "system", "idle", "iowait", "steal", "hardirq", "softirq", "guest", "gnice");
-        #endif
+    "CPU", "user", "nice", "system", "idle", "iowait", "steal", "hardirq", "softirq", "guest", "gnice");
+    #endif
+    
+    for (int i = 0; i < nr_cpu; i++) {
+        struct stats_cpu *curr = &scc[i];
+        struct stats_cpu *prev = &scp[i];
         
-        for (int i = 0; i < nr_cpu; i++) {
-            struct stats_cpu *curr = &scc[i];
-            struct stats_cpu *prev = &scp[i];
-            
-            if (first_record) {
-                // only write the all cpu stats
-                fwrite((void*) curr, sizeof(struct stats_cpu), 1, fd);
-                return;
-            }
-            long deltas[N_CPU] = {
-            (long)(curr->cpu_user - prev->cpu_user),
-            (long)(curr->cpu_nice - prev->cpu_nice),
-            (long)(curr->cpu_sys - prev->cpu_sys),
-            (long)(curr->cpu_idle - prev->cpu_idle),
-            (long)(curr->cpu_iowait - prev->cpu_iowait),
-            (long)(curr->cpu_steal - prev->cpu_steal),
-            (long)(curr->cpu_hardirq - prev->cpu_hardirq),
-            (long)(curr->cpu_softirq - prev->cpu_softirq),
-            (long)(curr->cpu_guest - prev->cpu_guest),
-            (long)(curr->cpu_guest_nice - prev->cpu_guest_nice)
+        if (first_record) {
+            // only write the all cpu stats
+            fwrite((void*) curr, sizeof(struct stats_cpu), 1, fd);
+            return;
+        }
+        
+        long deltas[N_CPU] = {
+        (long)(curr->cpu_user - prev->cpu_user),
+        (long)(curr->cpu_nice - prev->cpu_nice),
+        (long)(curr->cpu_sys - prev->cpu_sys),
+        (long)(curr->cpu_idle - prev->cpu_idle),
+        (long)(curr->cpu_iowait - prev->cpu_iowait),
+        (long)(curr->cpu_steal - prev->cpu_steal),
+        (long)(curr->cpu_hardirq - prev->cpu_hardirq),
+        (long)(curr->cpu_softirq - prev->cpu_softirq),
+        (long)(curr->cpu_guest - prev->cpu_guest),
+        (long)(curr->cpu_guest_nice - prev->cpu_guest_nice)
         };
 
         for (int j = 0; j < N_CPU; j++) {

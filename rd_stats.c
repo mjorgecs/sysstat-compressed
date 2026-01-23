@@ -28,10 +28,7 @@ void read_cpu_stats(struct stats_cpu **scc, struct stats_cpu **scp, int *nr_cpu,
     (*scc)->cpu_hardirq = (unsigned long long)(deltas[6] + prev->cpu_hardirq);
     (*scc)->cpu_softirq = (unsigned long long)(deltas[7] + prev->cpu_softirq);
     (*scc)->cpu_guest = (unsigned long long)(deltas[8] + prev->cpu_guest);
-    (*scc)->cpu_guest_nice = (unsigned long long)(deltas[9] + prev->cpu_guest_nice);
-
-    print_cpu_stats(*scc, *scp, *nr_cpu);
-    
+    (*scc)->cpu_guest_nice = (unsigned long long)(deltas[9] + prev->cpu_guest_nice);    
 }
 
 void read_memory_stats(struct stats_memory **smc, struct stats_memory **smp, 
@@ -70,8 +67,6 @@ void read_memory_stats(struct stats_memory **smc, struct stats_memory **smp,
 
     (*smc)->frskb = (unsigned long long) (deltas[16] + prev->frskb);
     (*smc)->tlskb = (unsigned long long) (deltas[17] + prev->tlskb);
-    
-    print_memory_stats(*smc);
 }
 
 void read_paging_stats(struct stats_paging **spc, struct stats_paging **spp, unsigned long long itv,
@@ -100,8 +95,6 @@ void read_paging_stats(struct stats_paging **spc, struct stats_paging **spp, uns
     (*spc)->pgsteal = (unsigned long long) (deltas[7] + prev->pgsteal);
     (*spc)->pgpromote = (unsigned long long) (deltas[8] + prev->pgpromote);
     (*spc)->pgdemote = (unsigned long long) (deltas[9] + prev->pgdemote);
-
-    print_paging_stats(*spc, *spp, itv);
 }
 
 void read_io_stats(struct stats_io **sic, struct stats_io **sip, FILE *fd, 
@@ -127,7 +120,6 @@ void read_io_stats(struct stats_io **sic, struct stats_io **sip, FILE *fd,
     (*sic)->dk_drive_rblk  = (unsigned long long) (deltas[4] + prev->dk_drive_rblk);
     (*sic)->dk_drive_wblk  = (unsigned long long) (deltas[5] + prev->dk_drive_wblk);
     (*sic)->dk_drive_dblk  = (unsigned long long) (deltas[6] + prev->dk_drive_dblk);
-    print_io_stats(*sic, *sip, itv);
 }
 
 void read_queue_stats(struct stats_queue **sqc, struct stats_queue **sqp, FILE *fd, int first_record,
@@ -152,7 +144,5 @@ void read_queue_stats(struct stats_queue **sqc, struct stats_queue **sqp, FILE *
     (*sqc)->load_avg_5 = (unsigned long long) (deltas[3] + prev->load_avg_5);
     (*sqc)->load_avg_15 = (unsigned long long) (deltas[4] + prev->load_avg_15);
     (*sqc)->procs_blocked = (unsigned long long) (deltas[5] + prev->procs_blocked);
-
-    print_queue_stats(*sqc);
 }
 
