@@ -16,7 +16,7 @@
 
 struct act_t{
     
-    void **act[2];
+    void *act[2];
 
     long *deltas;
 };

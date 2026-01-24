@@ -1,19 +1,15 @@
 #include "utils.h"
 
 void read_cpu_stats(struct stats_cpu ***scc, struct stats_cpu ***scp, int nr_cpu,
-                    void **m, int first_record, long *deltas, FILE *target_file) {
-    
+                    void **m, int first_record, long **deltas, FILE *target_file) {
+
     for (int i = 0; i < nr_cpu; i++) {
 
         if (first_record) {
-            // only read the all cpu stats
-            memcpy((void *) ((*scc)[i]), *m, sizeof(struct stats_cpu));
-            (*m) += sizeof(struct stats_cpu);
-
-            fwrite((void*) ((*scc)[i]), sizeof(struct stats_cpu), 1, target_file);
-            continue;
+            *deltas = (long *)malloc(sizeof(long) * N_CPU);
+            return;
         }
-        
+
         // Read CPU stats (undo deltas)
         memcpy(deltas, *m, sizeof(long) * N_CPU);
         (*m) += sizeof(long) * N_CPU;

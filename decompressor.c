@@ -48,18 +48,12 @@ int main(int argc, char **argv) {
     // Read and write file activity lists
     int i;
     struct file_activity *fal = ((struct file_activity *)m);
-    struct file_activity *file_actlst[hdr->sa_act_nr]; 
-
-    int nr_cpu = 0;
+    struct file_activity *file_actlst[hdr->sa_act_nr];
+    struct act_t *comp_acts[hdr->sa_act_nr];
 
     for (i = 0; i < (int)hdr->sa_act_nr; i++, fal++, m += FILE_ACTIVITY_SIZE) {
         fwrite(m, FILE_ACTIVITY_SIZE, 1, target_file);
         file_actlst[i] = fal;
-
-        // Get the number of CPUs
-        if (fal->id == A_CPU) {
-            nr_cpu = fal->nr;
-        }
     }
 
     // Allocate record header buffers
@@ -67,6 +61,8 @@ int main(int argc, char **argv) {
     record_hdr[1] = malloc(RECORD_HEADER_SIZE);
 
     int curr = 1, prev = 0, first_record = 1;
+    size_t data_size;
+    __nr_t nr_value;
     
     struct stats_cpu **cpu[2];
     // alllocate mamory for CPUs
@@ -105,7 +101,6 @@ int main(int argc, char **argv) {
         #endif
 
         // Read statistics for each activity
-        __nr_t nr_value;
         for (i = 0; i < (int)hdr->sa_act_nr; i++) {
             fal = file_actlst[i];
             
@@ -118,34 +113,18 @@ int main(int argc, char **argv) {
                 nr_value = fal->nr;
             }
 
-            if (fal->id==A_CPU) {
-                // Read CPU stats
-                read_cpu_stats(&cpu[curr], &cpu[prev], nr_cpu, &m, first_record, cpu_deltas, target_file);
+            data_size = (size_t) fal->size * (size_t) nr_value * (size_t) fal->nr2;
+
+            if (first_record) {
+                comp_acts[i]->act[0] = (void *)malloc(data_size);
+                comp_acts[i]->act[1] = (void *)malloc(data_size);
+
+                memcpy(comp_acts[i]->act[curr], m, data_size);
+                m += data_size;
             }
-            else if (fal->id==A_MEMORY) {
-                // Read Memory stats
-                read_memory_stats(&memory[curr], &memory[prev], target_file, first_record, &m, memory_deltas);
-                fwrite((void *)memory[curr], sizeof(struct stats_memory), 1, target_file);
-                printf("size_memory: %zu\n", sizeof(struct stats_memory));
-            }
-            else if (fal->id==A_PAGE) {
-                // Read Paging stats
-                read_paging_stats(&paging[curr], &paging[prev], itv, target_file, first_record, &m, paging_deltas);
-                fwrite((void *)paging[curr], sizeof(struct stats_paging), 1, target_file);
-                printf("size_paging: %zu\n", sizeof(struct stats_paging));                
-            }
-            else if (fal->id==A_IO) {
-                // Read I/O stats
-                read_io_stats(&io[curr], &io[prev], target_file, first_record, &m, io_deltas, itv);
-                fwrite((void *)io[curr], sizeof(struct stats_io), 1, target_file);
-                printf("size_io: %zu\n", sizeof(struct stats_io));
-            }
-            else if (fal->id==A_QUEUE) {
-                // Read Queue stats
-                read_queue_stats(&queue[curr], &queue[prev], target_file, first_record, &m, queue_deltas);
-                fwrite((void *)queue[curr], sizeof(struct stats_queue), 1, target_file);
-                printf("size_queue: %zu\n", sizeof(struct stats_queue));
-            }
+            decompress_stats(&comp_acts[i]->act[curr], &comp_acts[i]->act[prev], &m, first_record, nr_value, fal->id, target_file);
+            
+            fwrite(comp_acts[i]->act[curr], data_size, 1, target_file);
         }
 
         // Swap buffers
