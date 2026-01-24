@@ -20,9 +20,10 @@ int main(int argc, char **argv) {
     char *target = argv[2];
 
     int new_act = (argc - 3) ? (argc - 3) : 5;
-    int *act_flags = malloc(new_act * sizeof(int));
+    int *tmp_flags = malloc(new_act * sizeof(int));
+    int *final_flags = NULL;
 
-    set_activity_flags(argc, new_act, argv, &act_flags);
+    set_activity_flags(argc, new_act, argv, &tmp_flags);
 
     struct stat sbuf;
 	int fd = open(path, O_RDONLY);
@@ -50,16 +51,30 @@ int main(int argc, char **argv) {
     #endif
     
     unsigned int total_act = hdr.sa_act_nr;
+    struct file_activity *fal = ((struct file_activity *)m);
     
+    // Check dimensions and prepare final activity flags
+    new_act = check_dimensions(act, fal, tmp_flags, &final_flags, new_act, total_act);
+    free(tmp_flags);
+
+    if (new_act == 0) {
+        fprintf(stderr, "No valid activities selected. Exiting.\n");
+        munmap(m_start, len);
+        close(fd);
+        fclose(target_file);
+        return -1;
+    }
+
+    printf("Number of selected activities to be processed: %d\n", new_act);
+
     // Update number of activities in header and write it onto target file
     hdr.sa_act_nr = (unsigned int)new_act;
     fwrite((void *)&hdr, FILE_HEADER_SIZE, 1, target_file);
     
     // Read and write file activity lists
     int p, i, j, pos;
-    struct file_activity *fal = ((struct file_activity *)m);
     struct file_activity *file_act_lst[total_act]; 
-
+    
     for (i = 0; i < (int)total_act; i++, fal++, m += FILE_ACTIVITY_SIZE) {
         file_act_lst[i] = fal;
         
@@ -79,13 +94,7 @@ int main(int argc, char **argv) {
         act[p]->buf[1] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
         act[p]->nr_allocated = fal->nr;
 
-        if ((pos = is_selected(fal->id, act_flags, new_act)) >= 0) {
-            if (check_dimensions(act[p], fal->nr, fal->nr2) == -1) {
-                printf("Ignoring activity %s due to unsupported dimensions (nr2=%d max=1).\n", act[p]->name, fal->nr2);
-                // set activity as not selected (-1)
-                act_flags[pos] = -1;
-                continue;
-            }
+        if ((pos = is_selected(fal->id, final_flags, new_act)) >= 0) {
             fwrite(m, FILE_ACTIVITY_SIZE, 1, target_file);                 
         }
     }
@@ -124,16 +133,15 @@ int main(int argc, char **argv) {
             if ((nr_value > 0) && ((p=get_pos(act, fal->id)) >= 0)) {
                 data_size = (size_t) act[p]->fsize * (size_t) nr_value * (size_t) act[p]->nr2;
                 
-                if (is_selected(fal->id, act_flags, new_act)) {
+                if (is_selected(fal->id, final_flags, new_act) >= 0) {
                     if (fal->has_nr) fwrite((void *)&nr_value, sizeof(__nr_t), 1, target_file);
                     memcpy(act[p]->buf[curr], m, data_size);
                     act[p]->nr[curr] = nr_value;
                     m += data_size;
 
-                    compress_stats(act[p], curr, prev, fal->id, target_file, first_record);
+                    compress_stats(act[p], curr, prev, nr_value, fal->id, target_file, first_record);
                     continue;
                 }
-                
                 m += data_size;
             }
         }
@@ -159,7 +167,7 @@ int main(int argc, char **argv) {
 		}
     }
 
-    free(act_flags);
+    free(final_flags);
     free(record_hdr[0]);
     free(record_hdr[1]);
 

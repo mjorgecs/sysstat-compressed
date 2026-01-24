@@ -55,8 +55,8 @@ void usage(char * prog_name);
 
 int is_selected(int act_id, int *act_flags, int nr_act);
 
-void compress_stats(struct activity *act, int curr, int prev, unsigned int act_id, FILE *target_file, int first_record);
+void compress_stats(struct activity *act, int curr, int prev, int nr_value, unsigned int act_id, FILE *target_file, int first_record);
 
 void compress_record_hdr(struct record_header *curr_hdr, struct record_header *prev_hdr, FILE *fd, int first_record);
 
-int check_dimensions(struct activity *act, int nr, int nr2);
+int check_dimensions(struct activity *act[], struct file_activity *fal, int *act_flags, int **final_flags, int new_act, int total_act);

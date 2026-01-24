@@ -46,7 +46,7 @@ void set_activity_flags(int argc, int nr_act, char **argv, int **act_flags) {
 int is_selected(int act_id, int *act_flags, int nr_act) {
 	int i;
 	for (i = 0; i < nr_act; i++) {
-		if ((act_flags[i] != -1) && (act_flags[i] == act_id)) return i;
+		if (act_flags[i] == act_id) return i;
 	}
 	return -1;
 }
@@ -63,10 +63,10 @@ int get_pos(struct activity *act[], unsigned int act_flag) {
 }
 
 
-void compress_stats(struct activity *act, int curr, int prev, unsigned int act_id, FILE *target_file, int first_record) {
+void compress_stats(struct activity *act, int curr, int prev, int nr_value, unsigned int act_id, FILE *target_file, int first_record) {
 	switch (act_id) {
 		case A_CPU:
-			write_cpu_stats(act->buf[curr], act->buf[prev], act->nr_ini, target_file, first_record);
+			write_cpu_stats(act->buf[curr], act->buf[prev], nr_value, target_file, first_record);
 			break;
 		case A_MEMORY:
 			write_memory_stats(act->buf[curr], act->buf[prev], target_file, first_record);
@@ -91,26 +91,35 @@ void compress_stats(struct activity *act, int curr, int prev, unsigned int act_i
 *	0 if dimensions are ok
 *	-1 otherwise
 */
-int check_dimensions(struct activity *act, int nr, int nr2) {
-	if ((nr > act->nr_max) || (nr < 1) || (nr2 < 1)) {
-		/*There is a problem with the file format. The program must abort.*/
-		# ifdef DEBUG
-			fprintf(stderr, "%s: %s: nr=%d min=1 max=%d; nr2=%d min=1 max=1\n",
-				__FUNCTION__, act->name, nr, act->nr_max, nr2);
-		# endif
-		fprintf(stderr, "Error: Number of items for activity %s is out of range.\n", act->name);
-		exit(EXIT_FAILURE);
-	}
-	if (nr2 > 1) {
-		/*This compressor do not support multiple dimensions activities.
-		*Thus, the activity will be ignored.
-		*/
-		# ifdef DEBUG
-			fprintf(stderr, "%s: %s: Value nr2=%d Max=1\n",
-				__FUNCTION__, act->name, nr2);
-		# endif
-		return -1;
-	}
-	return 0;
-}
+int check_dimensions(struct activity *act[], struct file_activity *fal, int *act_flags, int **final_flags, int new_act, int total_act) {
+	int p, i, n_act = 0;
+	for (i = 0; i < total_act; i++, fal++) {
 
+		 if (((p = get_pos(act, fal->id)) < 0) || (is_selected(fal->id, act_flags, new_act) < 0)) {
+            continue;
+        }
+
+		if ((fal->nr > act[p]->nr_max) || (fal->nr < 1) || (fal->nr2 < 1)) {
+			/*There is a problem with the file format. The program must abort.*/
+			# ifdef DEBUG
+				fprintf(stderr, "%s: %s: nr=%d min=1 max=%d; nr2=%d min=1 max=1\n",
+					__FUNCTION__, act[p]->name, fal->nr, act[p]->nr_max, fal->nr2);
+			# endif
+			fprintf(stderr, "Error: Number of items for activity %s is out of range.\n", act[p]->name);
+			exit(EXIT_FAILURE);
+		} else if (fal->nr2 > 1) {
+			/*This compressor do not support multiple dimensions activities.
+			*Thus, the activity will be ignored.
+			*/
+			# ifdef DEBUG
+				fprintf(stderr, "%s: %s: Value nr2=%d Max=1\n", __FUNCTION__, act[p]->name, fal->nr2);
+			# endif
+			printf("Ignoring activity %s due to unsupported dimensions (nr2=%d max=1).\n", act[p]->name, fal->nr2);
+		} else {
+			(*final_flags) = (int *)realloc(*final_flags, (size_t)(n_act + 1) * sizeof(int));
+			(*final_flags)[n_act] = fal->id;
+			n_act++;
+		}
+	}
+	return n_act;
+}
