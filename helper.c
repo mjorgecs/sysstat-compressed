@@ -44,11 +44,13 @@ void set_activity_flags(int argc, int nr_act, char **argv, int **act_flags) {
 
 
 int is_selected(int act_id, int *act_flags, int nr_act) {
-	for (int i = 0; i < nr_act; i++) {
-		if (act_flags[i] == act_id) return 1;
+	int i;
+	for (i = 0; i < nr_act; i++) {
+		if ((act_flags[i] != -1) && (act_flags[i] == act_id)) return i;
 	}
-	return 0;
+	return -1;
 }
+
 
 int get_pos(struct activity *act[], unsigned int act_flag) {
 	for (int i = 0; i < NR_ACT; i++) {
@@ -82,3 +84,33 @@ void compress_stats(struct activity *act, int curr, int prev, unsigned int act_i
 			break;
 	}
 }
+
+/* This funtions checks the standard dimensions of the given
+* activity against the given values.
+* returns:
+*	0 if dimensions are ok
+*	-1 otherwise
+*/
+int check_dimensions(struct activity *act, int nr, int nr2) {
+	if ((nr > act->nr_max) || (nr < 1) || (nr2 < 1)) {
+		/*There is a problem with the file format. The program must abort.*/
+		# ifdef DEBUG
+			fprintf(stderr, "%s: %s: nr=%d min=1 max=%d; nr2=%d min=1 max=1\n",
+				__FUNCTION__, act->name, nr, act->nr_max, nr2);
+		# endif
+		fprintf(stderr, "Error: Number of items for activity %s is out of range.\n", act->name);
+		exit(EXIT_FAILURE);
+	}
+	if (nr2 > 1) {
+		/*This compressor do not support multiple dimensions activities.
+		*Thus, the activity will be ignored.
+		*/
+		# ifdef DEBUG
+			fprintf(stderr, "%s: %s: Value nr2=%d Max=1\n",
+				__FUNCTION__, act->name, nr2);
+		# endif
+		return -1;
+	}
+	return 0;
+}
+

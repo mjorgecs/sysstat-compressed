@@ -9,7 +9,8 @@
 
 struct record_header *record_hdr[2];
 
-int main(int argc, char ** argv) {
+int main(int argc, char **argv) {
+
     /*if(argc < 3) {
         fprintf(stderr, "Usage: %s <compressed file> <output file>\n", argv[0]);
         exit(EXIT_FAILURE);
@@ -44,55 +45,34 @@ int main(int argc, char ** argv) {
     printf("\nnr_act: %u", hdr->sa_act_nr);
     #endif
 
-    
-    // Read and write file_activity list
-    int p, i, j, k;
+    // Read and write file activity lists
+    int i;
     struct file_activity *fal = ((struct file_activity *)m);
     struct file_activity *file_actlst[hdr->sa_act_nr]; 
 
-
-    int nr_cpu;
+    int nr_cpu = 0;
 
     for (i = 0; i < (int)hdr->sa_act_nr; i++, fal++, m += FILE_ACTIVITY_SIZE) {
         fwrite(m, FILE_ACTIVITY_SIZE, 1, target_file);
         file_actlst[i] = fal;
 
-        // get the number of CPUs
+        // Get the number of CPUs
         if (fal->id == A_CPU) {
             nr_cpu = fal->nr;
         }
-        /*
-        if ((p = get_pos(act, fal->id)) < 0)
-			continue;
-
-        // Set activity attributes
-        for (k = 0; k < 3; k++) {
-			act[p]->ftypes_nr[k] = fal->types_nr[k];
-		}
-		if (fal->size > act[p]->msize) {
-			act[p]->msize = fal->size;
-		}
-		act[p]->nr_ini = fal->nr;
-		act[p]->nr2    = fal->nr2;
-		act[p]->fsize  = fal->size;
-
-        // Allocate buffers for curr and prev
-        act[p]->buf[0] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
-        act[p]->buf[1] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
-        act[p]->nr_allocated = fal->nr;
-        */
     }
 
+    // Allocate record header buffers
+    record_hdr[0] = malloc(RECORD_HEADER_SIZE);
+    record_hdr[1] = malloc(RECORD_HEADER_SIZE);
 
-    // Read records
-    int curr = 1, prev = 0;
-    int records_read = 0;
-    int first_record = 1;
+    int curr = 1, prev = 0, first_record = 1;
     
     struct stats_cpu **cpu[2];
     // alllocate mamory for CPUs
     cpu[0] = (struct stats_cpu **)malloc(sizeof(struct stats_cpu *) * nr_cpu);
     cpu[1] = (struct stats_cpu **)malloc(sizeof(struct stats_cpu *) * nr_cpu);
+    unsigned int record_hdr_deltas[N_RECORD_HDR_ULL];
 
     for (i = 0; i < nr_cpu; i++) {
         cpu[0][i] = (struct stats_cpu *)malloc(sizeof(struct stats_cpu));
@@ -113,11 +93,8 @@ int main(int argc, char ** argv) {
 
     unsigned long long itv = 100;
 
-    while (1) {  // Read until EOF
-        // Check if we have enough space for a record header
-        if ((size_t)(m - m_start) + RECORD_HEADER_SIZE > (size_t)len) {
-            break;  // Not enough data left for another record
-        }
+    // Process compressed data, read until EOF
+    do {
 
         record_hdr[curr] = ((struct record_header *) m);
         fwrite(m, RECORD_HEADER_SIZE, 1, target_file);
@@ -140,18 +117,6 @@ int main(int argc, char ** argv) {
             else {
                 nr_value = fal->nr;
             }
-            /*
-            p = get_pos(act, fal->id);
-            if (nr_value > 0 && p >= 0) {
-                size_t data_size = (size_t) act[p]->fsize * (size_t) nr_value * (size_t) act[p]->nr2;
-                
-                // Copy data
-                memcpy(act[p]->buf[curr], m, data_size);
-                act[p]->nr[curr] = nr_value;
-                
-                m += data_size;
-            }
-            */
 
             if (fal->id==A_CPU) {
                 // Read CPU stats
@@ -188,8 +153,8 @@ int main(int argc, char ** argv) {
         prev = curr;
         curr = tmp;
         first_record = 0;
-        records_read++;
-    }
+
+    } while(((size_t)(m - m_start) + RECORD_HEADER_SIZE) <= (size_t)len);
 
     // Cleanup
     for (i = 0; i < 2; i++) {

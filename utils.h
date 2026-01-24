@@ -14,6 +14,14 @@
 #define N_RECORD_HDR_ULL 2
 
 
+struct act_t{
+    
+    void **act[2];
+
+    long *deltas;
+};
+
+
 void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd, int first_record);
 
 void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE *fd, int first_record);
@@ -50,3 +58,5 @@ int is_selected(int act_id, int *act_flags, int nr_act);
 void compress_stats(struct activity *act, int curr, int prev, unsigned int act_id, FILE *target_file, int first_record);
 
 void compress_record_hdr(struct record_header *curr_hdr, struct record_header *prev_hdr, FILE *fd, int first_record);
+
+int check_dimensions(struct activity *act, int nr, int nr2);

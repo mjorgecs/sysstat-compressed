@@ -55,8 +55,8 @@ int main(int argc, char **argv) {
     hdr.sa_act_nr = (unsigned int)new_act;
     fwrite((void *)&hdr, FILE_HEADER_SIZE, 1, target_file);
     
-    // Read and write file activity list
-    int p, i, j;
+    // Read and write file activity lists
+    int p, i, j, pos;
     struct file_activity *fal = ((struct file_activity *)m);
     struct file_activity *file_act_lst[total_act]; 
 
@@ -64,9 +64,9 @@ int main(int argc, char **argv) {
         file_act_lst[i] = fal;
         
         // select only activities to be processed
-        if ((p = get_pos(act, fal->id)) < 0)
+        if ((p = get_pos(act, fal->id)) < 0) {
             continue;
-        
+        }
 		if (fal->size > act[p]->msize) {
 			act[p]->msize = fal->size;
 		}
@@ -79,7 +79,13 @@ int main(int argc, char **argv) {
         act[p]->buf[1] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
         act[p]->nr_allocated = fal->nr;
 
-        if (is_selected(fal->id, act_flags, new_act)) {
+        if ((pos = is_selected(fal->id, act_flags, new_act)) >= 0) {
+            if (check_dimensions(act[p], fal->nr, fal->nr2) == -1) {
+                printf("Ignoring activity %s due to unsupported dimensions (nr2=%d max=1).\n", act[p]->name, fal->nr2);
+                // set activity as not selected (-1)
+                act_flags[pos] = -1;
+                continue;
+            }
             fwrite(m, FILE_ACTIVITY_SIZE, 1, target_file);                 
         }
     }
@@ -88,7 +94,6 @@ int main(int argc, char **argv) {
     record_hdr[0] = malloc(RECORD_HEADER_SIZE);
     record_hdr[1] = malloc(RECORD_HEADER_SIZE);
 
-    // Read records
     int curr = 1, prev = 0, first_record = 1;
     size_t data_size;
     __nr_t nr_value;
