@@ -11,6 +11,7 @@
 #define N_PAGING 10
 #define N_MEMORY 18
 #define N_CPU 10
+#define N_RECORD_HDR_ULL 2
 
 
 void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd, int first_record);
@@ -47,3 +48,5 @@ void usage(char * prog_name);
 int is_selected(int act_id, int *act_flags, int nr_act);
 
 void compress_stats(struct activity *act, int curr, int prev, unsigned int act_id, FILE *target_file, int first_record);
+
+void compress_record_hdr(struct record_header *curr_hdr, struct record_header *prev_hdr, FILE *fd, int first_record);

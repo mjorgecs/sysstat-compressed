@@ -231,3 +231,42 @@ void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *f
     #endif
 }
 
+void compress_record_hdr(struct record_header *curr_hdr, struct record_header *prev_hdr, FILE *fd, int first_record) {
+    struct record_header *curr = curr_hdr;
+    struct record_header *prev = prev_hdr;
+
+    #ifdef VERBOSE
+    printf("\n%-12s  %9s  %9s  %9s  %9s  %9s  %9s  %9s\n",
+            "RECORD HEADER", "uptime_cs", "ust_time", "extra_next", "record_type",
+            "hour", "minute", "second");
+    printf("%-12s  ", "");
+    #endif
+
+    if (first_record) {
+        fwrite((void*)curr, sizeof(struct record_header), 1, fd);
+        #ifdef VERBOSE
+        printf("%9llu  %9llu  ", curr->uptime_cs, curr->ust_time);
+        #endif
+    }else {
+        unsigned int deltas[N_RECORD_HDR_ULL] = {
+            (unsigned int) (curr->uptime_cs - prev->uptime_cs),
+            (unsigned int) (curr->ust_time - prev->ust_time),
+        };
+    
+        for (int i = 0; i < N_RECORD_HDR_ULL; i++) {
+            fwrite((void *)&deltas[i], sizeof(unsigned int), 1, fd);
+            #ifdef VERBOSE
+            printf("%9u  ", deltas[i]);
+            #endif
+        }
+    }
+    
+    fwrite((void *)&curr->extra_next, sizeof(unsigned int), 1, fd);
+    fwrite((void *)&curr->record_type, sizeof(unsigned char), 1, fd);
+    fwrite((void *)&curr->hour, sizeof(unsigned char), 1, fd);
+    fwrite((void *)&curr->minute, sizeof(unsigned char), 1, fd);
+    fwrite((void *)&curr->second, sizeof(unsigned char), 1, fd);
+    #ifdef VERBOSE
+    printf("%9u  %9u  %9u  %9u  %9u\n",curr->extra_next, curr->record_type, curr->hour, curr->minute, curr->second);
+    #endif
+}

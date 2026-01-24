@@ -84,6 +84,10 @@ int main(int argc, char **argv) {
         }
     }
 
+    // Allocate record header buffers
+    record_hdr[0] = malloc(RECORD_HEADER_SIZE);
+    record_hdr[1] = malloc(RECORD_HEADER_SIZE);
+
     // Read records
     int curr = 1, prev = 0, first_record = 1;
     size_t data_size;
@@ -92,13 +96,13 @@ int main(int argc, char **argv) {
     // Process records, read until EOF
     do {
 
-        record_hdr[curr] = ((struct record_header *) m);
-        fwrite(m, RECORD_HEADER_SIZE, 1, target_file);
+        memcpy((void*)record_hdr[curr], m, RECORD_HEADER_SIZE);
         m += RECORD_HEADER_SIZE;
         
         #ifdef VERBOSE
         printf("\n%02u:%02u:%02u --- COMPRESSED DATA WRITTEN (DELTAS): ", record_hdr[curr]->hour, record_hdr[curr]->minute, record_hdr[curr]->second);
         #endif
+        compress_record_hdr(record_hdr[curr], record_hdr[prev], target_file, first_record);
 
         // Read statistics for each activity
         for (i = 0; i < (int)total_act; i++) {
@@ -151,6 +155,8 @@ int main(int argc, char **argv) {
     }
 
     free(act_flags);
+    free(record_hdr[0]);
+    free(record_hdr[1]);
 
     munmap(m_start, len);
     close(fd);
