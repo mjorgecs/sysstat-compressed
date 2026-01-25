@@ -1,34 +1,39 @@
+#include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
+#include <inttypes.h>
 #include "../sysstat-repo/sa.h"
 #include "../sysstat-repo/rd_stats.h"
 
 
-
+// Number of fields per stats structure
 #define N_QUEUE 6
 #define N_IO 7
 #define N_PAGING 10
 #define N_MEMORY 18
 #define N_CPU 10
+#define N_RECORD_HDR_ULL 2
 
-/*
- * Macros used to display statistics values.
- *
- */
-/* With S_VALUE macro, the interval of time (@p) is given in 1/100th of a second */
-#define S_VALUE(m,n,p)		(((double) ((n) - (m))) / (p) * 100)
-/* Define SP_VALUE() to normalize to % */
-#define SP_VALUE(m,n,p)		(((double) ((n) - (m))) / (p) * 100)
+#define COMP_FLAG_12(x) _Generic((x), long: "%12ld", int: "%12d")
+#define COMP_FLAG_9(x) _Generic((x), long: "%9ld", int: "%9d")
+#define COMP_FLAG_5(x) _Generic((x), long: "%5ld", int: "%5d")
+#define COMP_ARG(x) _Generic((x), long: (long)(x), int: (int)(x))
 
+/* Type (size) of the compressed data written*/
+#define __comp_t int
 
-void print_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu);
+/* Struct for compressed activities */
+struct act_t{
+    /*Number of items for this activity*/
+    int nr;
 
-void print_memory_stats(struct stats_memory *smc);
+    /* Array of pointers to activity data (current and previous) */
+    void *act[2];
 
-void print_paging_stats(struct stats_paging *spc, struct stats_paging *spp, unsigned long long itv);
+    /* Array of deltas for the activity */
+    __comp_t *deltas;
+};
 
-void print_io_stats(struct stats_io *sic, struct stats_io *sip, unsigned long long itv);
-
-void print_queue_stats(struct stats_queue *sqc);
 
 void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd, int first_record);
 
@@ -42,17 +47,28 @@ void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *f
 
 int get_pos(struct activity *act[], unsigned int act_flag);
 
-void read_cpu_stats(struct stats_cpu **scc, struct stats_cpu **scp, int *nr_cpu,
-                    void **m, int first_record, long *deltas);
+void read_cpu_stats(struct act_t **act, int curr, int prev, void **m, int first_record);
 
-void read_memory_stats(struct stats_memory **smc, struct stats_memory **smp, 
-                        FILE *fd, int first_record, void **m, long *deltas);
+void read_memory_stats(struct act_t **act, int curr, int prev, void **m, int first_record);
 
-void read_paging_stats(struct stats_paging **spc, struct stats_paging **spp, unsigned long long itv,
-                        FILE *fd, int first_record, void **m, long *deltas);
+void read_paging_stats(struct act_t **act, int curr, int prev, void **m, int first_record);
 
-void read_io_stats(struct stats_io **sic, struct stats_io **sip, FILE *fd, 
-                    int first_record, void **m, long *deltas, unsigned long long itv);
+void read_io_stats(struct act_t **act, int curr, int prev, void **m, int first_record);
 
-void read_queue_stats(struct stats_queue **sqc, struct stats_queue **sqp, FILE *fd, int first_record,
-                    void **m, long *deltas);
+void read_queue_stats(struct act_t **act, int curr, int prev, void **m, int first_record);
+
+void set_activity_flags(int argc, int nr_act, char **argv, int **act_flags);
+
+void usage(char * prog_name);
+
+int is_selected(int act_id, int *act_flags, int nr_act);
+
+void compress_stats(struct activity *act, int curr, int prev, int nr_value, unsigned int act_id, FILE *target_file, int first_record);
+
+void compress_record_hdr(struct record_header *curr_hdr, struct record_header *prev_hdr, FILE *fd, int first_record);
+
+int check_dimensions(struct activity *act[], struct file_activity *fal, int *act_flags, int **final_flags, int new_act, int total_act);
+
+void decompress_stats(struct act_t **act, int curr, int prev, void **m, int first_record, int act_id);
+
+void decompress_record_hdr(struct record_header **curr_hdr, struct record_header *prev_hdr, void **m, unsigned int **deltas, int first_record);

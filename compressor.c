@@ -1,71 +1,89 @@
-// Manual calculation version - demonstrates how to calculate CPU percentages
-// compile : gcc -Wall -Wextra -std=c99 -I ../sysstat-repo/ ../sysstat-repo/activity.c read_file_manual.c -o read_file_manual -lm
-
 #include <stdio.h>
-#include <stdlib.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
-#include <string.h>
 
 #include "utils.h"
-#include "../sysstat-repo/sa.h"
-#include "../sysstat-repo/rd_stats.h"
-#include "../sysstat-repo/version.h"
 
-extern struct activity * act[];
+extern struct activity *act[];
 struct record_header *record_hdr[2];
 
 
-int main(int argc, char ** argv) {
-    if(argc < 3) {
-        fprintf(stderr, "Usage: %s <sa file> <output file>\n", argv[0]);
-        exit(EXIT_FAILURE);
-    }
-
-	char * path = argv[1];
-    char * target = argv[2];
+int main(int argc, char **argv) {
     
+    if(argc < 3) {
+        usage(argv[0]);
+    }
+    
+	char *path = argv[1];
+    char *target = argv[2];
+
+    int new_act = (argc - 3) ? (argc - 3) : 5;
+    int *tmp_flags = malloc(new_act * sizeof(int));
+    int *final_flags = NULL;
+
+    set_activity_flags(argc, new_act, argv, &tmp_flags);
+
     struct stat sbuf;
 	int fd = open(path, O_RDONLY);
 	fstat(fd, &sbuf);
 	off_t len = sbuf.st_size;
-    void * m_start = (void *) mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
-    void * m = m_start;
+    void *m_start = (void *) mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
+    void *m = m_start;
     
     FILE * target_file = fopen(target, "w");
+
+    // Write the size of the current deltas
+    size_t comp_t_size = sizeof(__comp_t);
+    fwrite((void *)&comp_t_size, sizeof(unsigned int), 1, target_file);
 
     // Write file_magic
     fwrite(m, FILE_MAGIC_SIZE, 1, target_file);
     m += FILE_MAGIC_SIZE;
-
-    // Write file_header
-    struct file_header *hdr = (struct file_header *)m;
-    #ifdef VERBOSE
-    printf("Linux %s (%s) \t%02u/%02u/%d \t_x86_64_\t(%d CPU)\n\n",
-           hdr->sa_release, hdr->sa_nodename,
-           hdr->sa_month, hdr->sa_day, hdr->sa_year + 1900,
-           hdr->sa_cpu_nr > 1 ? hdr->sa_cpu_nr - 1 : 1);
-    #endif
-    fwrite(m, FILE_HEADER_SIZE, 1, target_file);
+    
+    // Copy file header
+    struct file_header hdr;
+    memcpy((void *)&hdr, m, FILE_HEADER_SIZE);
     m += FILE_HEADER_SIZE;
     
-    // Read and write file_activity list
-    int p, i, j, k;
+    #ifdef VERBOSE
+    printf("Linux %s (%s) \t%02u/%02u/%d \t_x86_64_\t(%d CPU)\n\n",
+    hdr.sa_release, hdr.sa_nodename,
+    hdr.sa_month, hdr.sa_day, hdr.sa_year + 1900,
+    hdr.sa_cpu_nr > 1 ? hdr.sa_cpu_nr - 1 : 1);
+    #endif
+    
+    unsigned int total_act = hdr.sa_act_nr;
     struct file_activity *fal = ((struct file_activity *)m);
-    struct file_activity *file_actlst[hdr->sa_act_nr]; 
+    
+    // Check dimensions and prepare final activity flags
+    new_act = check_dimensions(act, fal, tmp_flags, &final_flags, new_act, total_act);
+    free(tmp_flags);
 
-    for (i = 0; i < (int)hdr->sa_act_nr; i++, fal++, m += FILE_ACTIVITY_SIZE) {
-        file_actlst[i] = fal;
+    if (new_act == 0) {
+        fprintf(stderr, "No valid activities selected. Exiting.\n");
+        munmap(m_start, len);
+        close(fd);
+        fclose(target_file);
+        return -1;
+    }
+
+    // Update number of activities in header and write it onto target file
+    hdr.sa_act_nr = (unsigned int)new_act;
+    fwrite((void *)&hdr, FILE_HEADER_SIZE, 1, target_file);
+    
+    // Read and write file activity lists
+    int p, i, j, pos;
+    struct file_activity *file_act_lst[total_act]; 
+    
+    for (i = 0; i < (int)total_act; i++, fal++, m += FILE_ACTIVITY_SIZE) {
+        file_act_lst[i] = fal;
         
-        if ((p = get_pos(act, fal->id)) < 0)
-			continue;
-
-        // Set activity attributes
-        for (k = 0; k < 3; k++) {
-			act[p]->ftypes_nr[k] = fal->types_nr[k];
-		}
+        // select only activities to be processed
+        if ((p = get_pos(act, fal->id)) < 0) {
+            continue;
+        }
 		if (fal->size > act[p]->msize) {
 			act[p]->msize = fal->size;
 		}
@@ -77,80 +95,58 @@ int main(int argc, char ** argv) {
         act[p]->buf[0] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
         act[p]->buf[1] = malloc((size_t) act[p]->msize * (size_t) act[p]->nr_ini * (size_t) act[p]->nr2);
         act[p]->nr_allocated = fal->nr;
+
+        if ((pos = is_selected(fal->id, final_flags, new_act)) >= 0) {
+            fwrite(m, FILE_ACTIVITY_SIZE, 1, target_file);                 
+        }
     }
 
+    // Allocate record header buffers
+    record_hdr[0] = malloc(RECORD_HEADER_SIZE);
+    record_hdr[1] = malloc(RECORD_HEADER_SIZE);
 
-    // Read records
-    int curr = 1, prev = 0;
-    int records_read = 0;
-    int first_record = 1;
+    int curr = 1, prev = 0, first_record = 1;
+    size_t data_size;
+    __nr_t nr_value;
     
-    while (1) {  // Read until EOF
-        // Check if we have enough space for a record header
-        if ((size_t)(m - m_start) + RECORD_HEADER_SIZE > (size_t)len) {
-            break;  // Not enough data left for another record
-        }
+    // Process records, read until EOF
+    do {
 
-        record_hdr[curr] = ((struct record_header *) m);
-        fwrite(m, RECORD_HEADER_SIZE, 1, target_file);
+        memcpy((void*)record_hdr[curr], m, RECORD_HEADER_SIZE);
         m += RECORD_HEADER_SIZE;
         
         #ifdef VERBOSE
-        printf("\nTIME: %02u:%02u:%02u-------", record_hdr[curr]->hour, record_hdr[curr]->minute, record_hdr[curr]->second);
+        printf("\n%02u:%02u:%02u --- COMPRESSED DATA WRITTEN (DELTAS): ", record_hdr[curr]->hour, record_hdr[curr]->minute, record_hdr[curr]->second);
         #endif
+        compress_record_hdr(record_hdr[curr], record_hdr[prev], target_file, first_record);
 
         // Read statistics for each activity
-        __nr_t nr_value;
-        for (i = 0; i < (int)hdr->sa_act_nr; i++) {
-            fal = file_actlst[i];
+        for (i = 0; i < (int)total_act; i++) {
+            fal = file_act_lst[i];
             
             if (fal->has_nr) {
-                nr_value = *((__nr_t *) m);
+                memcpy((void *)&nr_value, m, sizeof(__nr_t));
                 m += sizeof(__nr_t);
             }
             else {
                 nr_value = fal->nr;
             }
 
-            p = get_pos(act, fal->id);
-            if (nr_value > 0 && p >= 0) {
-                size_t data_size = (size_t) act[p]->fsize * (size_t) nr_value * (size_t) act[p]->nr2;
+            if ((nr_value > 0) && ((p=get_pos(act, fal->id)) >= 0)) {
+                data_size = (size_t) act[p]->fsize * (size_t) nr_value * (size_t) act[p]->nr2;
                 
-                // Copy data
-                memcpy(act[p]->buf[curr], m, data_size);
-                act[p]->nr[curr] = nr_value;
-                
+                if (is_selected(fal->id, final_flags, new_act) >= 0) {
+                    if (fal->has_nr) {
+                        fwrite((void *)&nr_value, sizeof(__nr_t), 1, target_file);
+                    }
+                    memcpy(act[p]->buf[curr], m, data_size);
+                    act[p]->nr[curr] = nr_value;
+                    m += data_size;
+
+                    compress_stats(act[p], curr, prev, nr_value, fal->id, target_file, first_record);
+                    continue;
+                }
                 m += data_size;
-            }
-
-            fwrite((void *)&fal->id, sizeof(unsigned int), 1, target_file);
-
-            if (fal->id == A_CPU) {
-                // Print CPU stats
-                write_cpu_stats((struct stats_cpu *)act[p]->buf[curr], (struct stats_cpu *)act[p]->buf[prev], 
-                                act[p]->nr_ini, target_file, first_record);
-            }
-            
-            else if (fal->id == A_MEMORY) {
-                // Print Memory stats
-                write_memory_stats((struct stats_memory *)act[p]->buf[curr], (struct stats_memory *)act[p]->buf[prev], 
-                                    target_file, first_record);
-            }
-
-            else if (fal->id == A_PAGE) {
-                // Print Paging stats
-                write_paging_stats((struct stats_paging *)act[p]->buf[curr], (struct stats_paging *)act[p]->buf[prev], 
-                                    target_file, first_record);
-            }
-
-            else if (fal->id == A_IO) {
-                // Print I/O stats
-                write_io_stats((struct stats_io *)act[p]->buf[curr], (struct stats_io *)act[p]->buf[prev], target_file, first_record);
-            }
-
-            else if (fal->id == A_QUEUE) {
-                // Print Queue stats
-                write_queue_stats((struct stats_queue *)act[p]->buf[curr], (struct stats_queue *)act[p]->buf[prev], target_file, first_record);
             }
         }
 
@@ -159,8 +155,8 @@ int main(int argc, char ** argv) {
         prev = curr;
         curr = tmp;
         first_record = 0;
-        records_read++;
-    }
+
+    } while(((size_t)(m - m_start) + RECORD_HEADER_SIZE) <= (size_t)len);
 
     // Cleanup
     for (i = 0; i < NR_ACT; i++) {
@@ -174,6 +170,10 @@ int main(int argc, char ** argv) {
 			act[i]->nr_allocated = 0;
 		}
     }
+
+    free(final_flags);
+    free(record_hdr[0]);
+    free(record_hdr[1]);
 
     munmap(m_start, len);
     close(fd);
