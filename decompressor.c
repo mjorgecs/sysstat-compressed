@@ -27,6 +27,19 @@ int main(int argc, char **argv) {
     
     FILE * target_file = fopen(target, "w");
 
+    // Check the size of compressed data type
+    unsigned int comp_t_size;
+    memcpy((void *)&comp_t_size, m, sizeof(unsigned int));
+
+    if (comp_t_size != sizeof(__comp_t)) {
+        fprintf(stderr, "Error: Compressed data type (__comp_t) size mismatch. Expected %u bytes, got %zu bytes\n", comp_t_size, sizeof(__comp_t));
+        munmap(m_start, len);
+        close(fd);
+        fclose(target_file);
+        exit(EXIT_FAILURE);
+    }
+    m += sizeof(unsigned int);
+
     // Write file magic
     fwrite(m, FILE_MAGIC_SIZE, 1, target_file);
     m += FILE_MAGIC_SIZE;

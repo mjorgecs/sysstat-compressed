@@ -34,6 +34,10 @@ int main(int argc, char **argv) {
     
     FILE * target_file = fopen(target, "w");
 
+    // Write the size of the current deltas
+    size_t comp_t_size = sizeof(__comp_t);
+    fwrite((void *)&comp_t_size, sizeof(unsigned int), 1, target_file);
+
     // Write file_magic
     fwrite(m, FILE_MAGIC_SIZE, 1, target_file);
     m += FILE_MAGIC_SIZE;
