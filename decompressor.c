@@ -59,53 +59,24 @@ int main(int argc, char **argv) {
     // Allocate record header buffers
     record_hdr[0] = malloc(RECORD_HEADER_SIZE);
     record_hdr[1] = malloc(RECORD_HEADER_SIZE);
-
+    unsigned int *record_deltas = malloc(sizeof(unsigned int) * N_RECORD_HDR_ULL);
+ 
     int curr = 1, prev = 0, first_record = 1;
     size_t data_size;
     __nr_t nr_value;
-    
-    struct stats_cpu **cpu[2];
-    // alllocate mamory for CPUs
-    cpu[0] = (struct stats_cpu **)malloc(sizeof(struct stats_cpu *) * nr_cpu);
-    cpu[1] = (struct stats_cpu **)malloc(sizeof(struct stats_cpu *) * nr_cpu);
-    unsigned int record_hdr_deltas[N_RECORD_HDR_ULL];
-
-    for (i = 0; i < nr_cpu; i++) {
-        cpu[0][i] = (struct stats_cpu *)malloc(sizeof(struct stats_cpu));
-        cpu[1][i] = (struct stats_cpu *)malloc(sizeof(struct stats_cpu));
-    }
-
-    struct stats_memory *memory[2];
-    struct stats_paging *paging[2];
-    struct stats_io *io[2];
-    struct stats_queue *queue[2];
-
-    long cpu_deltas[N_CPU];
-    long memory_deltas[N_MEMORY];
-    long paging_deltas[N_PAGING];
-    long io_deltas[N_IO];
-    long queue_deltas[N_QUEUE];
-    
-
-    unsigned long long itv = 100;
 
     // Process compressed data, read until EOF
     do {
-
-        record_hdr[curr] = ((struct record_header *) m);
-        fwrite(m, RECORD_HEADER_SIZE, 1, target_file);
-        m += RECORD_HEADER_SIZE;
         
-        #ifdef VERBOSE
-        printf("\nTIME: %02u:%02u:%02u-------", record_hdr[curr]->hour, record_hdr[curr]->minute, record_hdr[curr]->second);
-        #endif
-
+        decompress_record_hdr(&record_hdr[curr], record_hdr[prev], &m, &record_deltas, first_record);
+        fwrite(record_hdr[curr], RECORD_HEADER_SIZE, 1, target_file);
+        
         // Read statistics for each activity
         for (i = 0; i < (int)hdr->sa_act_nr; i++) {
             fal = file_actlst[i];
             
             if (fal->has_nr) {
-                nr_value = *((__nr_t *) m);
+                memcpy((void *)&nr_value, m, sizeof(__nr_t));
                 fwrite(m, sizeof(__nr_t), 1, target_file);
                 m += sizeof(__nr_t);
             }
@@ -116,13 +87,17 @@ int main(int argc, char **argv) {
             data_size = (size_t) fal->size * (size_t) nr_value * (size_t) fal->nr2;
 
             if (first_record) {
+                // Allocate buffers for compressed activities
+                comp_acts[i] = (struct act_t *) malloc(sizeof(struct act_t));
+                comp_acts[i]->nr = fal->nr;
                 comp_acts[i]->act[0] = (void *)malloc(data_size);
                 comp_acts[i]->act[1] = (void *)malloc(data_size);
 
                 memcpy(comp_acts[i]->act[curr], m, data_size);
                 m += data_size;
             }
-            decompress_stats(&comp_acts[i]->act[curr], &comp_acts[i]->act[prev], &m, first_record, nr_value, fal->id, target_file);
+            printf("Decompressing activity ID %u; nr=%d, fal-nr=%d, has nr=%d\n", fal->id, nr_value, fal->nr, fal->has_nr);
+            decompress_stats(&comp_acts[i], curr, prev, &m, first_record, fal->id);
             
             fwrite(comp_acts[i]->act[curr], data_size, 1, target_file);
         }
@@ -135,14 +110,16 @@ int main(int argc, char **argv) {
 
     } while(((size_t)(m - m_start) + RECORD_HEADER_SIZE) <= (size_t)len);
 
-    // Cleanup
-    for (i = 0; i < 2; i++) {
-        //free(cpu[i]);
-        free(memory[i]);
-        free(paging[i]);
-        free(io[i]);
-        free(queue[i]);
+    for (i = 0; i < (int)hdr->sa_act_nr; i++) {
+        free(comp_acts[i]->act[0]);
+        free(comp_acts[i]->act[1]);
+        free(comp_acts[i]->deltas);
+        free(comp_acts[i]);
     }
+
+    free(record_hdr[0]);
+    free(record_hdr[1]);
+    free(record_deltas);
 
     munmap(m_start, len);
     close(fd);

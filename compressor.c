@@ -129,12 +129,15 @@ int main(int argc, char **argv) {
             else {
                 nr_value = fal->nr;
             }
+            printf("id=%d has nr=%d, nr=%d\n", fal->id, fal->has_nr, nr_value);
 
             if ((nr_value > 0) && ((p=get_pos(act, fal->id)) >= 0)) {
                 data_size = (size_t) act[p]->fsize * (size_t) nr_value * (size_t) act[p]->nr2;
                 
                 if (is_selected(fal->id, final_flags, new_act) >= 0) {
-                    if (fal->has_nr) fwrite((void *)&nr_value, sizeof(__nr_t), 1, target_file);
+                    if (fal->has_nr) {
+                        fwrite((void *)&nr_value, sizeof(__nr_t), 1, target_file);
+                    }
                     memcpy(act[p]->buf[curr], m, data_size);
                     act[p]->nr[curr] = nr_value;
                     m += data_size;

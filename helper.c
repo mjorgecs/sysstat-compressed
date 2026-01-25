@@ -124,28 +124,23 @@ int check_dimensions(struct activity *act[], struct file_activity *fal, int *act
 	return n_act;
 }
 
-void decompress_stats(struct act_t **acts, int curr, int prev, void **m, int first_record,
-						int nr_value, int act_id, FILE *target_file, size_t size) {
+void decompress_stats(struct act_t **act, int curr, int prev, void **m, int first_record, int act_id) {
 	
 	switch(act_id) {
 		case A_CPU:
-			read_cpu_stats(acts, curr, prev, m, first_record, target_file, size);
+			read_cpu_stats(act, curr, prev, m, first_record);
 			break;
 		case A_MEMORY:
-			read_memory_stats(&memory[curr], &memory[prev], target_file, first_record, &m, memory_deltas);
-			fwrite((void *)memory[curr], sizeof(struct stats_memory), 1, target_file);
+			read_memory_stats(act, curr, prev, m, first_record);
 			break;
 		case A_PAGE:
-			read_paging_stats(&paging[curr], &paging[prev], itv, target_file, first_record, &m, paging_deltas);
-			fwrite((void *)paging[curr], sizeof(struct stats_paging), 1, target_file);
+			read_paging_stats(act, curr, prev, m, first_record);
 			break;
 		case A_IO:
-			read_io_stats(&io[curr], &io[prev], target_file, first_record, &m, io_deltas, itv);
-			fwrite((void *)io[curr], sizeof(struct stats_io), 1, target_file);
+			read_io_stats(act, curr, prev, m, first_record);
 			break;
 		case A_QUEUE:
-			read_queue_stats(&queue[curr], &queue[prev], target_file, first_record, &m, queue_deltas);
-			fwrite((void *)queue[curr], sizeof(struct stats_queue), 1, target_file);
+			read_queue_stats(act, curr, prev, m, first_record);
 			break;
 		default:
 			break;
