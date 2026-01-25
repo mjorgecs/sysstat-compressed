@@ -6,18 +6,17 @@
 
 #include "utils.h"
 
-
 struct record_header *record_hdr[2];
 
 int main(int argc, char **argv) {
 
-    /*if(argc < 3) {
+    if(argc < 3) {
         fprintf(stderr, "Usage: %s <compressed file> <output file>\n", argv[0]);
         exit(EXIT_FAILURE);
-    }*/
+    }
 
-	char *path = "target.bin";
-    char *target = "file_decompressed.bin";
+	char *path = argv[1];
+    char *target = argv[2];
     
     struct stat sbuf;
 	int fd = open(path, O_RDONLY);
@@ -42,7 +41,6 @@ int main(int argc, char **argv) {
            hdr->sa_release, hdr->sa_nodename,
            hdr->sa_month, hdr->sa_day, hdr->sa_year + 1900,
            hdr->sa_cpu_nr > 1 ? hdr->sa_cpu_nr - 1 : 1);
-    printf("\nnr_act: %u", hdr->sa_act_nr);
     #endif
 
     // Read and write file activity lists
@@ -67,10 +65,10 @@ int main(int argc, char **argv) {
 
     // Process compressed data, read until EOF
     do {
-        
+
         decompress_record_hdr(&record_hdr[curr], record_hdr[prev], &m, &record_deltas, first_record);
         fwrite(record_hdr[curr], RECORD_HEADER_SIZE, 1, target_file);
-        
+
         // Read statistics for each activity
         for (i = 0; i < (int)hdr->sa_act_nr; i++) {
             fal = file_actlst[i];
@@ -89,14 +87,13 @@ int main(int argc, char **argv) {
             if (first_record) {
                 // Allocate buffers for compressed activities
                 comp_acts[i] = (struct act_t *) malloc(sizeof(struct act_t));
-                comp_acts[i]->nr = fal->nr;
+                comp_acts[i]->nr = nr_value;
                 comp_acts[i]->act[0] = (void *)malloc(data_size);
                 comp_acts[i]->act[1] = (void *)malloc(data_size);
 
                 memcpy(comp_acts[i]->act[curr], m, data_size);
                 m += data_size;
             }
-            printf("Decompressing activity ID %u; nr=%d, fal-nr=%d, has nr=%d\n", fal->id, nr_value, fal->nr, fal->has_nr);
             decompress_stats(&comp_acts[i], curr, prev, &m, first_record, fal->id);
             
             fwrite(comp_acts[i]->act[curr], data_size, 1, target_file);

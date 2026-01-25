@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <inttypes.h>
 #include "../sysstat-repo/sa.h"
 #include "../sysstat-repo/rd_stats.h"
 
@@ -13,14 +14,24 @@
 #define N_CPU 10
 #define N_RECORD_HDR_ULL 2
 
+#define COMP_FLAG_12(x) _Generic((x), long: "%12ld", int: "%12d")
+#define COMP_FLAG_9(x) _Generic((x), long: "%9ld", int: "%9d")
+#define COMP_FLAG_5(x) _Generic((x), long: "%5ld", int: "%5d")
+#define COMP_ARG(x) _Generic((x), long: (long)(x), int: (int)(x))
 
+/* Type (size) of the compressed data written*/
+#define __comp_t int
+
+/* Struct for compressed activities */
 struct act_t{
-    
+    /*Number of items for this activity*/
     int nr;
 
+    /* Array of pointers to activity data (current and previous) */
     void *act[2];
 
-    long *deltas;
+    /* Array of deltas for the activity */
+    __comp_t *deltas;
 };
 
 

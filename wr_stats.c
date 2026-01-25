@@ -1,4 +1,5 @@
 #include "utils.h"
+#define DEBUG
 
 void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, FILE *fd, int first_record) {
     
@@ -22,23 +23,24 @@ void write_cpu_stats(struct stats_cpu *scc, struct stats_cpu *scp, int nr_cpu, F
             continue;
         }
         
-        long deltas[N_CPU] = {
-        (long)(curr->cpu_user - prev->cpu_user),
-        (long)(curr->cpu_nice - prev->cpu_nice),
-        (long)(curr->cpu_sys - prev->cpu_sys),
-        (long)(curr->cpu_idle - prev->cpu_idle),
-        (long)(curr->cpu_iowait - prev->cpu_iowait),
-        (long)(curr->cpu_steal - prev->cpu_steal),
-        (long)(curr->cpu_hardirq - prev->cpu_hardirq),
-        (long)(curr->cpu_softirq - prev->cpu_softirq),
-        (long)(curr->cpu_guest - prev->cpu_guest),
-        (long)(curr->cpu_guest_nice - prev->cpu_guest_nice)
+        __comp_t deltas[N_CPU] = {
+        (__comp_t)(curr->cpu_user - prev->cpu_user),
+        (__comp_t)(curr->cpu_nice - prev->cpu_nice),
+        (__comp_t)(curr->cpu_sys - prev->cpu_sys),
+        (__comp_t)(curr->cpu_idle - prev->cpu_idle),
+        (__comp_t)(curr->cpu_iowait - prev->cpu_iowait),
+        (__comp_t)(curr->cpu_steal - prev->cpu_steal),
+        (__comp_t)(curr->cpu_hardirq - prev->cpu_hardirq),
+        (__comp_t)(curr->cpu_softirq - prev->cpu_softirq),
+        (__comp_t)(curr->cpu_guest - prev->cpu_guest),
+        (__comp_t)(curr->cpu_guest_nice - prev->cpu_guest_nice)
         };
 
         for (int j = 0; j < N_CPU; j++) {
-            fwrite((void *)&deltas[j], sizeof(long), 1, fd);
+            fwrite((void *)&deltas[j], sizeof(__comp_t), 1, fd);
             #ifdef VERBOSE
-            printf("%5ld  ", deltas[j]);
+            printf(COMP_FLAG_5(deltas[j]), COMP_ARG(deltas[j]));
+            printf("  ");
             #endif
         }
         #ifdef VERBOSE
@@ -69,33 +71,34 @@ void write_memory_stats(struct stats_memory *smc, struct stats_memory *smp, FILE
         return;
     }
 
-    long deltas[N_MEMORY] = {
-        (long)(curr->frmkb - prev->frmkb),
-        (long)(curr->availablekb - prev->availablekb),
-        (long)(curr->bufkb - prev->bufkb),
-        (long)(curr->camkb - prev->camkb),
-        (long)(curr->comkb - prev->comkb),
-        (long)(curr->activekb - prev->activekb),
-        (long)(curr->inactkb - prev->inactkb),
-        (long)(curr->dirtykb - prev->dirtykb),
-        (long)(curr->shmemkb - prev->shmemkb),
+    __comp_t deltas[N_MEMORY] = {
+        (__comp_t)(curr->frmkb - prev->frmkb),
+        (__comp_t)(curr->availablekb - prev->availablekb),
+        (__comp_t)(curr->bufkb - prev->bufkb),
+        (__comp_t)(curr->camkb - prev->camkb),
+        (__comp_t)(curr->comkb - prev->comkb),
+        (__comp_t)(curr->activekb - prev->activekb),
+        (__comp_t)(curr->inactkb - prev->inactkb),
+        (__comp_t)(curr->dirtykb - prev->dirtykb),
+        (__comp_t)(curr->shmemkb - prev->shmemkb),
 
-        (long)(curr->tlmkb - prev->tlmkb),
-        (long)(curr->caskb - prev->caskb),
-        (long)(curr->anonpgkb - prev->anonpgkb),
-        (long)(curr->slabkb - prev->slabkb),
-        (long)(curr->kstackkb - prev->kstackkb),
-        (long)(curr->pgtblkb - prev->pgtblkb),
-        (long)(curr->vmusedkb - prev->vmusedkb),
+        (__comp_t)(curr->tlmkb - prev->tlmkb),
+        (__comp_t)(curr->caskb - prev->caskb),
+        (__comp_t)(curr->anonpgkb - prev->anonpgkb),
+        (__comp_t)(curr->slabkb - prev->slabkb),
+        (__comp_t)(curr->kstackkb - prev->kstackkb),
+        (__comp_t)(curr->pgtblkb - prev->pgtblkb),
+        (__comp_t)(curr->vmusedkb - prev->vmusedkb),
 
-        (long)(curr->frskb - prev->frskb),
-        (long)(curr->tlskb - prev->tlskb)
+        (__comp_t)(curr->frskb - prev->frskb),
+        (__comp_t)(curr->tlskb - prev->tlskb)
     };        
 
     for (int i = 0; i < N_MEMORY; i++) {
-        fwrite((void *)&deltas[i], sizeof(long), 1, fd);
+        fwrite((void *)&deltas[i], sizeof(__comp_t), 1, fd);
         #ifdef VERBOSE
-        printf("%9ld  ", deltas[i]);
+        printf(COMP_FLAG_9(deltas[i]), COMP_ARG(deltas[i]));
+        printf("  ");
         #endif
     }
     #ifdef VERBOSE
@@ -124,23 +127,24 @@ void write_paging_stats(struct stats_paging *spc, struct stats_paging *spp, FILE
         return;
     }
 
-    long deltas[N_PAGING] = {
-        (long) (curr->pgpgin - prev->pgpgin),
-        (long) (curr->pgpgout - prev->pgpgout),
-        (long) (curr->pgfault - prev->pgfault),
-        (long) (curr->pgmajfault - prev->pgmajfault),
-        (long) (curr->pgfree - prev->pgfree),
-        (long) (curr->pgscan_kswapd - prev->pgscan_kswapd),
-        (long) (curr->pgscan_direct - prev->pgscan_direct),
-        (long) (curr->pgsteal - prev->pgsteal),
-        (long) (curr->pgpromote - prev->pgpromote),
-        (long) (curr->pgdemote - prev->pgdemote)
+    __comp_t deltas[N_PAGING] = {
+        (__comp_t) (curr->pgpgin - prev->pgpgin),
+        (__comp_t) (curr->pgpgout - prev->pgpgout),
+        (__comp_t) (curr->pgfault - prev->pgfault),
+        (__comp_t) (curr->pgmajfault - prev->pgmajfault),
+        (__comp_t) (curr->pgfree - prev->pgfree),
+        (__comp_t) (curr->pgscan_kswapd - prev->pgscan_kswapd),
+        (__comp_t) (curr->pgscan_direct - prev->pgscan_direct),
+        (__comp_t) (curr->pgsteal - prev->pgsteal),
+        (__comp_t) (curr->pgpromote - prev->pgpromote),
+        (__comp_t) (curr->pgdemote - prev->pgdemote)
     };
 
     for (int i = 0; i < N_PAGING; i++) {
-        fwrite((void *)&deltas[i], sizeof(long), 1, fd);
+        fwrite((void *)&deltas[i], sizeof(__comp_t), 1, fd);
         #ifdef VERBOSE
-        printf("%9ld   ", deltas[i]);
+        printf(COMP_FLAG_9(deltas[i]), COMP_ARG(deltas[i]));
+        printf("  ");
         #endif
     }
     #ifdef VERBOSE
@@ -169,20 +173,21 @@ void write_io_stats(struct stats_io *sic, struct stats_io *sip, FILE *fd, int fi
         return;
     }
 
-    long deltas[N_IO] = {
-        (long) (curr->dk_drive - prev->dk_drive),
-        (long) (curr->dk_drive_rio - prev->dk_drive_rio),
-        (long) (curr->dk_drive_wio - prev->dk_drive_wio),
-        (long) (curr->dk_drive_dio - prev->dk_drive_dio),
-        (long) (curr->dk_drive_rblk - prev->dk_drive_rblk),
-        (long) (curr->dk_drive_wblk - prev->dk_drive_wblk),
-        (long) (curr->dk_drive_dblk - prev->dk_drive_dblk)
+    __comp_t deltas[N_IO] = {
+        (__comp_t) (curr->dk_drive - prev->dk_drive),
+        (__comp_t) (curr->dk_drive_rio - prev->dk_drive_rio),
+        (__comp_t) (curr->dk_drive_wio - prev->dk_drive_wio),
+        (__comp_t) (curr->dk_drive_dio - prev->dk_drive_dio),
+        (__comp_t) (curr->dk_drive_rblk - prev->dk_drive_rblk),
+        (__comp_t) (curr->dk_drive_wblk - prev->dk_drive_wblk),
+        (__comp_t) (curr->dk_drive_dblk - prev->dk_drive_dblk)
     };
 
     for (int i = 0; i < N_IO; i++) {
-        fwrite((void *)&deltas[i], sizeof(long), 1, fd);
+        fwrite((void *)&deltas[i], sizeof(__comp_t), 1, fd);
         #ifdef VERBOSE
-        printf("%9ld  ", deltas[i]);
+        printf(COMP_FLAG_9(deltas[i]), COMP_ARG(deltas[i]));
+        printf("  ");
         #endif
     }
     #ifdef VERBOSE
@@ -211,19 +216,20 @@ void write_queue_stats(struct stats_queue *sqc, struct stats_queue *sqp, FILE *f
         return;
     }
 
-    long deltas[N_QUEUE] = {
-        (long) (curr->nr_running - prev->nr_running),
-        (long) (curr->nr_threads - prev->nr_threads),
-        (long) (curr->load_avg_1 - prev->load_avg_1),
-        (long) (curr->load_avg_5 - prev->load_avg_5),
-        (long) (curr->load_avg_15 - prev->load_avg_15),
-        (long) (curr->procs_blocked - prev->procs_blocked)
+    __comp_t deltas[N_QUEUE] = {
+        (__comp_t) (curr->nr_running - prev->nr_running),
+        (__comp_t) (curr->nr_threads - prev->nr_threads),
+        (__comp_t) (curr->load_avg_1 - prev->load_avg_1),
+        (__comp_t) (curr->load_avg_5 - prev->load_avg_5),
+        (__comp_t) (curr->load_avg_15 - prev->load_avg_15),
+        (__comp_t) (curr->procs_blocked - prev->procs_blocked)
     };
 
     for (int i = 0; i < N_QUEUE; i++) {
-        fwrite((void *)&deltas[i], sizeof(long), 1, fd);
+        fwrite((void *)&deltas[i], sizeof(__comp_t), 1, fd);
         #ifdef VERBOSE
-        printf("%12ld  ", deltas[i]);
+        printf(COMP_FLAG_12(deltas[i]), COMP_ARG(deltas[i]));
+        printf("  ");
         #endif
     }
     #ifdef VERBOSE
@@ -243,11 +249,11 @@ void compress_record_hdr(struct record_header *curr_hdr, struct record_header *p
     #endif
 
     if (first_record) {
-        fwrite((void*)curr, sizeof(struct record_header), 1, fd);
+        fwrite((void*)curr, RECORD_HEADER_SIZE, 1, fd);
         #ifdef VERBOSE
         printf("%9llu  %9llu  ", curr->uptime_cs, curr->ust_time);
         #endif
-    }else {
+    } else {
         unsigned int deltas[N_RECORD_HDR_ULL] = {
             (unsigned int) (curr->uptime_cs - prev->uptime_cs),
             (unsigned int) (curr->ust_time - prev->ust_time),
@@ -259,13 +265,14 @@ void compress_record_hdr(struct record_header *curr_hdr, struct record_header *p
             printf("%9u  ", deltas[i]);
             #endif
         }
-    }
     
-    fwrite((void *)&curr->extra_next, sizeof(unsigned int), 1, fd);
-    fwrite((void *)&curr->record_type, sizeof(unsigned char), 1, fd);
-    fwrite((void *)&curr->hour, sizeof(unsigned char), 1, fd);
-    fwrite((void *)&curr->minute, sizeof(unsigned char), 1, fd);
-    fwrite((void *)&curr->second, sizeof(unsigned char), 1, fd);
+        fwrite((void *)&curr->extra_next, sizeof(unsigned int), 1, fd);
+        fwrite((void *)&curr->record_type, sizeof(unsigned char), 1, fd);
+        fwrite((void *)&curr->hour, sizeof(unsigned char), 1, fd);
+        fwrite((void *)&curr->minute, sizeof(unsigned char), 1, fd);
+        fwrite((void *)&curr->second, sizeof(unsigned char), 1, fd);
+    }
+
     #ifdef VERBOSE
     printf("%9u  %9u  %9u  %9u  %9u\n",curr->extra_next, curr->record_type, curr->hour, curr->minute, curr->second);
     #endif

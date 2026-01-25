@@ -4,10 +4,10 @@ void read_cpu_stats(struct act_t **act, int curr, int prev, void **m, int first_
 
     struct stats_cpu *ca = (struct stats_cpu *) (*act)->act[curr];
     struct stats_cpu *pa = (struct stats_cpu *) (*act)->act[prev];
-    long **deltas = &((*act)->deltas);
+    __comp_t **deltas = &((*act)->deltas);
     
     if (first_record) {
-        *deltas = (long *)malloc(sizeof(long) * N_CPU);
+        *deltas = (__comp_t *)malloc(sizeof(__comp_t) * N_CPU);
     }
     
     for (int i = 0; i < (*act)->nr; i++) {
@@ -19,8 +19,8 @@ void read_cpu_stats(struct act_t **act, int curr, int prev, void **m, int first_
 
         if (!first_record) {
             // Read CPU stats (undo deltas)
-            memcpy(*deltas, *m, sizeof(long) * N_CPU);
-            (*m) += sizeof(long) * N_CPU;
+            memcpy(*deltas, *m, sizeof(__comp_t) * N_CPU);
+            (*m) += sizeof(__comp_t) * N_CPU;
     
             ca[i].cpu_user = (unsigned long long)((*deltas)[0] + pa[i].cpu_user);
             ca[i].cpu_nice = (unsigned long long)((*deltas)[1] + pa[i].cpu_nice);
@@ -46,10 +46,10 @@ void read_memory_stats(struct act_t **act, int curr, int prev, void **m, int fir
     
     struct stats_memory *ca = (struct stats_memory *) (*act)->act[curr];
     struct stats_memory *pa = (struct stats_memory *) (*act)->act[prev];
-    long **deltas = &((*act)->deltas);
+    __comp_t **deltas = &((*act)->deltas);
     
     if (first_record) {
-        *deltas = (long *)malloc(sizeof(long) * N_MEMORY);
+        *deltas = (__comp_t *)malloc(sizeof(__comp_t) * N_MEMORY);
     }
 
     for (int i = 0; i < (*act)->nr; i++) {
@@ -62,8 +62,8 @@ void read_memory_stats(struct act_t **act, int curr, int prev, void **m, int fir
 
         if (!first_record) {
             // Read Memory stats (undo deltas)
-            memcpy(*deltas, *m, sizeof(long) * N_MEMORY);
-            (*m) += sizeof(long) * N_MEMORY;
+            memcpy(*deltas, *m, sizeof(__comp_t) * N_MEMORY);
+            (*m) += sizeof(__comp_t) * N_MEMORY;
     
             ca[i].frmkb = (unsigned long long) ((*deltas)[0] + pa[i].frmkb);
             ca[i].availablekb = (unsigned long long) ((*deltas)[1] + pa[i].availablekb);
@@ -100,10 +100,10 @@ void read_paging_stats(struct act_t **act, int curr, int prev, void **m, int fir
 
     struct stats_paging *ca = (struct stats_paging *) (*act)->act[curr];
     struct stats_paging *pa = (struct stats_paging *) (*act)->act[prev];
-    long **deltas = &((*act)->deltas);
+    __comp_t **deltas = &((*act)->deltas);
 
     if (first_record) {
-        *deltas = (long *)malloc(sizeof(long) * N_PAGING);
+        *deltas = (__comp_t *)malloc(sizeof(__comp_t) * N_PAGING);
     }
 
     for (int i = 0; i < (*act)->nr; i++) {
@@ -115,8 +115,8 @@ void read_paging_stats(struct act_t **act, int curr, int prev, void **m, int fir
         #endif
 
         if (!first_record) {
-            memcpy(*deltas, *m, sizeof(long) * N_PAGING);
-            (*m) += sizeof(long) * N_PAGING;
+            memcpy(*deltas, *m, sizeof(__comp_t) * N_PAGING);
+            (*m) += sizeof(__comp_t) * N_PAGING;
             
             ca[i].pgpgin = (unsigned long long) ((*deltas)[0] + pa[i].pgpgin);
             ca[i].pgpgout = (unsigned long long) ((*deltas)[1] + pa[i].pgpgout);
@@ -142,10 +142,10 @@ void read_io_stats(struct act_t **act, int curr, int prev, void **m, int first_r
 
     struct stats_io *ca = (struct stats_io *) (*act)->act[curr];
     struct stats_io *pa = (struct stats_io *) (*act)->act[prev];
-    long **deltas = &((*act)->deltas);
+    __comp_t **deltas = &((*act)->deltas);
 
     if (first_record) {
-        *deltas = (long *)malloc(sizeof(long) * N_IO);
+        *deltas = (__comp_t *)malloc(sizeof(__comp_t) * N_IO);
     }
 
     for (int i = 0; i < (*act)->nr; i++) {
@@ -157,8 +157,8 @@ void read_io_stats(struct act_t **act, int curr, int prev, void **m, int first_r
 
         #endif
         if (!first_record) {
-            memcpy(*deltas, *m, sizeof(long) * N_IO);
-            (*m) += sizeof(long) * N_IO;
+            memcpy(*deltas, *m, sizeof(__comp_t) * N_IO);
+            (*m) += sizeof(__comp_t) * N_IO;
     
             ca[i].dk_drive  = (unsigned long long) ((*deltas)[0] + pa[i].dk_drive);
             ca[i].dk_drive_rio  = (unsigned long long) ((*deltas)[1] + pa[i].dk_drive_rio);
@@ -181,10 +181,10 @@ void read_queue_stats(struct act_t **act, int curr, int prev, void **m, int firs
 
     struct stats_queue *ca = (struct stats_queue *) (*act)->act[curr];
     struct stats_queue *pa = (struct stats_queue *) (*act)->act[prev];
-    long **deltas = &((*act)->deltas);
+    __comp_t **deltas = &((*act)->deltas);
     
     if (first_record) {
-        *deltas = (long *)malloc(sizeof(long) * N_QUEUE);
+        *deltas = (__comp_t *)malloc(sizeof(__comp_t) * N_QUEUE);
     }
 
     for (int i = 0; i < (*act)->nr; i++) {
@@ -195,8 +195,8 @@ void read_queue_stats(struct act_t **act, int curr, int prev, void **m, int firs
         #endif
 
         if (!first_record) {
-            memcpy(*deltas, *m, sizeof(long) * N_QUEUE);
-            (*m) += sizeof(long) * N_QUEUE;
+            memcpy(*deltas, *m, sizeof(__comp_t) * N_QUEUE);
+            (*m) += sizeof(__comp_t) * N_QUEUE;
     
             ca[i].nr_running = (unsigned long long) ((*deltas)[0] + pa[i].nr_running);
             ca[i].nr_threads = (unsigned long long) ((*deltas)[1] + pa[i].nr_threads);

@@ -65,8 +65,6 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    printf("Number of selected activities to be processed: %d\n", new_act);
-
     // Update number of activities in header and write it onto target file
     hdr.sa_act_nr = (unsigned int)new_act;
     fwrite((void *)&hdr, FILE_HEADER_SIZE, 1, target_file);
@@ -129,7 +127,6 @@ int main(int argc, char **argv) {
             else {
                 nr_value = fal->nr;
             }
-            printf("id=%d has nr=%d, nr=%d\n", fal->id, fal->has_nr, nr_value);
 
             if ((nr_value > 0) && ((p=get_pos(act, fal->id)) >= 0)) {
                 data_size = (size_t) act[p]->fsize * (size_t) nr_value * (size_t) act[p]->nr2;
