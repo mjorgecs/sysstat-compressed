@@ -8,6 +8,34 @@
 
 extern struct activity *act[];
 struct record_header *record_hdr[2];
+int *final_flags = NULL;
+FILE * target_file;
+int fd;
+off_t len;
+void *m_start;
+
+void cleanup() {
+    // Cleanup
+    for (int i = 0; i < NR_ACT; i++) {
+		if (act[i]->nr_allocated > 0) {
+			for (int j = 0; j < 2; j++) {
+				if (act[i]->buf[j]) {
+					free(act[i]->buf[j]);
+					act[i]->buf[j] = NULL;
+				}
+			}
+			act[i]->nr_allocated = 0;
+		}
+    }
+
+    if (final_flags) free(final_flags);
+    if (record_hdr[0]) free(record_hdr[0]);
+    if (record_hdr[1]) free(record_hdr[1]);
+
+    munmap(m_start, len);
+    close(fd);
+    fclose(target_file);
+}
 
 
 int main(int argc, char **argv) {
@@ -17,22 +45,26 @@ int main(int argc, char **argv) {
     }
     
 	char *path = argv[1];
+    if (access(path, R_OK) != 0) {
+        fprintf(stderr, "Error: Cannot access file %s\n", path);
+        exit(EXIT_FAILURE);
+    }
+    
     char *target = argv[2];
 
     int new_act = (argc - 3) ? (argc - 3) : 5;
     int *tmp_flags = malloc(new_act * sizeof(int));
-    int *final_flags = NULL;
 
     set_activity_flags(argc, new_act, argv, &tmp_flags);
 
     struct stat sbuf;
 	int fd = open(path, O_RDONLY);
 	fstat(fd, &sbuf);
-	off_t len = sbuf.st_size;
-    void *m_start = (void *) mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
+	len = sbuf.st_size;
+    m_start = (void *) mmap(NULL, len, PROT_READ, MAP_PRIVATE, fd, 0);
     void *m = m_start;
     
-    FILE * target_file = fopen(target, "w");
+    target_file = fopen(target, "w");
 
     // Write the size of the current deltas
     size_t comp_t_size = sizeof(__comp_t);
@@ -59,14 +91,11 @@ int main(int argc, char **argv) {
     
     // Check dimensions and prepare final activity flags
     new_act = check_dimensions(act, fal, tmp_flags, &final_flags, new_act, total_act);
-    free(tmp_flags);
-
-    if (new_act == 0) {
-        fprintf(stderr, "No valid activities selected. Exiting.\n");
-        munmap(m_start, len);
-        close(fd);
-        fclose(target_file);
-        return -1;
+    
+    if (new_act < 0) {
+        free(tmp_flags);
+        cleanup();
+        exit(EXIT_FAILURE);
     }
 
     // Update number of activities in header and write it onto target file
@@ -74,7 +103,7 @@ int main(int argc, char **argv) {
     fwrite((void *)&hdr, FILE_HEADER_SIZE, 1, target_file);
     
     // Read and write file activity lists
-    int p, i, j, pos;
+    int p, i, pos;
     struct file_activity *file_act_lst[total_act]; 
     
     for (i = 0; i < (int)total_act; i++, fal++, m += FILE_ACTIVITY_SIZE) {
@@ -158,26 +187,7 @@ int main(int argc, char **argv) {
 
     } while(((size_t)(m - m_start) + RECORD_HEADER_SIZE) <= (size_t)len);
 
-    // Cleanup
-    for (i = 0; i < NR_ACT; i++) {
-		if (act[i]->nr_allocated > 0) {
-			for (j = 0; j < 2; j++) {
-				if (act[i]->buf[j]) {
-					free(act[i]->buf[j]);
-					act[i]->buf[j] = NULL;
-				}
-			}
-			act[i]->nr_allocated = 0;
-		}
-    }
-
-    free(final_flags);
-    free(record_hdr[0]);
-    free(record_hdr[1]);
-
-    munmap(m_start, len);
-    close(fd);
-    fclose(target_file);
+    cleanup();
     
     return 0;
 }

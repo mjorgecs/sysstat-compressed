@@ -3,11 +3,11 @@
 void usage(char * prog_name) {
     fprintf(stderr, "Usage: %s <sar file> <output file> <activities>\n", prog_name);
     fprintf(stderr, "Activities are:\n"
-                      "  A_CPU       CPU usage statistics\n"
-                      "  A_MEMORY    Memory usage statistics\n"
-                      "  A_PAGE      Paging statistics\n"
-                      "  A_IO        I/O statistics\n"
-                      "  A_QUEUE     Queue statistics\n");
+                      "  CPU       CPU usage statistics\n"
+                      "  MEMORY    Memory usage statistics\n"
+                      "  PAGE      Paging statistics\n"
+                      "  IO        I/O statistics\n"
+                      "  QUEUE     Queue statistics\n");
     fprintf(stderr, "If no activities are given, all default activities are processed.\n");
     exit(EXIT_FAILURE);
 }
@@ -24,15 +24,15 @@ void set_activity_flags(int argc, int nr_act, char **argv, int **act_flags) {
 	} else {
 		// Set activities from command line
 		for (int i = 0; i < nr_act; i++) {
-			if (strcmp(argv[i + 3], "A_CPU") == 0) {
+			if (strcmp(argv[i + 3], "CPU") == 0) {
 				(*act_flags)[i] = A_CPU;
-			} else if (strcmp(argv[i + 3], "A_MEMORY") == 0) {
+			} else if (strcmp(argv[i + 3], "MEMORY") == 0) {
 				(*act_flags)[i] = A_MEMORY;
-			} else if (strcmp(argv[i + 3], "A_PAGE") == 0) {
+			} else if (strcmp(argv[i + 3], "PAGE") == 0) {
 				(*act_flags)[i] = A_PAGE;
-			} else if (strcmp(argv[i + 3], "A_IO") == 0) {
+			} else if (strcmp(argv[i + 3], "IO") == 0) {
 				(*act_flags)[i] = A_IO;
-			} else if (strcmp(argv[i + 3], "A_QUEUE") == 0) {
+			} else if (strcmp(argv[i + 3], "QUEUE") == 0) {
 				(*act_flags)[i] = A_QUEUE;
 			} else {
 				fprintf(stderr, "Unknown activity: %s\n", argv[i + 3]);
@@ -105,8 +105,8 @@ int check_dimensions(struct activity *act[], struct file_activity *fal, int *act
 				fprintf(stderr, "%s: %s: nr=%d min=1 max=%d; nr2=%d min=1 max=1\n",
 					__FUNCTION__, act[p]->name, fal->nr, act[p]->nr_max, fal->nr2);
 			# endif
-			fprintf(stderr, "Error: Number of items for activity %s is out of range.\n", act[p]->name);
-			exit(EXIT_FAILURE);
+			fprintf(stderr, "Error: Number of items for activity %s is out of range.\n", act[p]->name);	
+			return -1;
 		} else if (fal->nr2 > 1) {
 			/*This compressor do not support multiple dimensions activities.
 			*Thus, the activity will be ignored.
@@ -120,6 +120,10 @@ int check_dimensions(struct activity *act[], struct file_activity *fal, int *act
 			(*final_flags)[n_act] = fal->id;
 			n_act++;
 		}
+	}
+	if (n_act == 0) {
+		fprintf(stderr, "Error: No valid activities selected.\n");
+		return -1;
 	}
 	return n_act;
 }
